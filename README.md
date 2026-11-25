@@ -97,7 +97,8 @@ See [Uninstalling](docs/troubleshooting.md#uninstalling). Your Default account i
 | [How it works](docs/how-it-works.md) | What is shared, how sign-in is routed, what Switchboard reads |
 | [The `cprof` command](docs/cli.md) | Every command, with examples |
 | [Troubleshooting](docs/troubleshooting.md) | Fixes for common problems, and how to uninstall |
-| [Contributing](CONTRIBUTING.md) | Build, test, project layout, making a release |
+| [Contributing](CONTRIBUTING.md) | How to report a bug, suggest an idea or send a pull request |
+| [Development](docs/development.md) | Project layout, screenshots, making a release |
 
 ## Contributing
 
