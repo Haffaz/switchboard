@@ -144,7 +144,8 @@ enum Dialogs {
 
     static func help() -> HelpChoice {
         let alert = makeAlert()
-        alert.messageText = "Switchboard"
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        alert.messageText = version.map { "Switchboard \($0)" } ?? "Switchboard"
         alert.informativeText = """
             Each account has its own Claude Desktop and its own Claude Code sign-in.
 

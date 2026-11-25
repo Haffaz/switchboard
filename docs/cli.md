@@ -4,7 +4,9 @@
 
 ## Install
 
-In the Switchboard menu, choose **Install Command Line Tool**. That links `cprof` into `~/.local/bin`.
+If you installed Switchboard with Homebrew, `cprof` is already on your `PATH`.
+
+Otherwise, in the Switchboard menu, choose **Install Command Line Tool**. That links `cprof` into `~/.local/bin`.
 
 Or link it yourself:
 

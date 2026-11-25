@@ -86,24 +86,41 @@ The app icon and the menu bar icon are drawn by code: `tools/make-icon.swift` an
 
 Commit messages follow [Conventional Commits](https://www.conventionalcommits.org): `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`.
 
-## Making a signed release
+## Making a release
 
-Signing needs an Apple Developer ID. You do not need one to contribute.
+A release is a signed, notarized DMG on GitHub, plus a Homebrew recipe that points at it. Signing needs an Apple Developer ID. You do not need one to contribute.
+
+One-time setup:
 
 1. Copy `release.local.env.example` to `release.local.env` and fill in your identity. That file is ignored by git.
-2. Store a notary password once:
+2. Store a notary password in your Keychain:
 
 ```bash
 xcrun notarytool store-credentials switchboard-notary --apple-id YOUR_APPLE_ID --team-id YOUR_TEAM_ID
 ```
 
-3. Set `VERSION` in `release.env`, then run:
+For each release:
+
+1. Set `VERSION` in `release.env`, then get that change onto `main` on GitHub.
+2. Build, sign and notarize the DMG:
 
 ```bash
 ./release.sh
 ```
 
-It runs the tests, builds for Apple silicon and Intel, signs, notarizes, staples, and writes `build/Switchboard-<version>.dmg`.
+3. See what publishing would do. This changes nothing and lists anything that is not ready:
+
+```bash
+./publish.sh --dry-run
+```
+
+4. Publish:
+
+```bash
+./publish.sh
+```
+
+`publish.sh` tags the release, creates the GitHub release with the DMG, and writes the Homebrew recipe to the tap repository named in `release.env`, creating that repository the first time. The recipe is generated from `packaging/switchboard.rb.template`; edit the template, never the copy in the tap.
 
 ## Reporting a security problem
 

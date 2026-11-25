@@ -8,11 +8,26 @@ You need:
 
 - macOS 14 or later.
 - [Claude Desktop](https://claude.ai/download), [Claude Code](https://claude.com/claude-code), or both.
-- Xcode 16 or later, to build Switchboard. There are no downloadable releases yet.
 
 Your current Claude setup stays exactly as it is. Switchboard lists it as **Default** and never moves or changes it. You can rename it, for example to "Personal".
 
 ## 1. Install
+
+Pick one. The first two start working with the first release; until then, build from source.
+
+**Homebrew**
+
+```bash
+brew install --cask haffaz/tap/switchboard
+```
+
+If Homebrew says the tap is not trusted, run `brew trust haffaz/tap` and install again.
+
+**Download**
+
+Get `Switchboard-<version>.dmg` from the [Releases page](https://github.com/Haffaz/switchboard/releases), open it, and drag Switchboard to Applications.
+
+**Build from source** (needs Xcode 16 or later)
 
 ```bash
 git clone https://github.com/Haffaz/switchboard.git
@@ -22,7 +37,7 @@ git clone https://github.com/Haffaz/switchboard.git
 cd switchboard && ./build.sh --install
 ```
 
-This builds **Switchboard.app**, copies it to `/Applications` and opens it. A two-cog icon appears in your menu bar.
+Open Switchboard from Applications if it is not already running. A two-cog icon appears in your menu bar.
 
 To have it there after every restart, click the icon and choose **Open at Login**.
 
@@ -93,7 +108,7 @@ For a Dock icon that opens one account's Claude Desktop, choose **Add Dock Icon*
 
 ## 5. Optional: use it from the terminal
 
-Choose **Install Command Line Tool** in the menu. You can then run `cprof` in any terminal:
+If you installed with Homebrew, `cprof` is already available. Otherwise choose **Install Command Line Tool** in the menu. You can then run `cprof` in any terminal:
 
 ```bash
 cprof list

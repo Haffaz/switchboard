@@ -26,7 +26,21 @@ It comes with `cprof`, a command-line tool that does the same things from a term
 
 ## Install
 
-There are no downloadable releases yet, so you build it yourself. This takes about a minute.
+> **No release yet.** The Homebrew and download options start working with the first release. Until then, use [Build from source](#build-from-source).
+
+### Homebrew
+
+```bash
+brew install --cask haffaz/tap/switchboard
+```
+
+This installs the app and puts the `cprof` command on your `PATH`. If Homebrew says the tap is not trusted, run `brew trust haffaz/tap` and install again.
+
+### Download
+
+Get `Switchboard-<version>.dmg` from the [Releases page](https://github.com/Haffaz/switchboard/releases), open it, and drag Switchboard to Applications. The app is signed and notarized, so it opens without a warning.
+
+### Build from source
 
 You need macOS 14 or later and Xcode 16 or later (for Swift 6).
 
@@ -38,7 +52,9 @@ git clone https://github.com/Haffaz/switchboard.git
 cd switchboard && ./build.sh --install
 ```
 
-That builds **Switchboard.app**, copies it to `/Applications` and opens it. Look for the two-cog icon in your menu bar.
+That builds **Switchboard.app**, copies it to `/Applications` and opens it.
+
+However you install it, look for the two-cog icon in your menu bar.
 
 ## Quick start
 
