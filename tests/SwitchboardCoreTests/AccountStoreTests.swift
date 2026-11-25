@@ -145,6 +145,42 @@ struct AccountDetailTests {
     }
 }
 
+@Suite("Claude Code login, as Claude Code reports it")
+struct CodeLoginTests {
+    @Test("Reads signed-in and signed-out answers")
+    func parses() {
+        let signedIn = ClaudeCode.parseLoginStatus(Data(#"{"loggedIn":true,"authMethod":"claude.ai","email":"me@x.example"}"#.utf8))
+        #expect(signedIn == CodeLogin(signedIn: true, email: "me@x.example"))
+        let signedOut = ClaudeCode.parseLoginStatus(Data(#"{"loggedIn":false,"authMethod":"none"}"#.utf8))
+        #expect(signedOut == CodeLogin(signedIn: false, email: ""))
+    }
+
+    @Test("Anything unexpected means 'could not ask', not 'signed out'", arguments: ["", "not json", "[]", #"{"loggedIn":"yes"}"#])
+    func rejectsGarbage(output: String) {
+        #expect(ClaudeCode.parseLoginStatus(Data(output.utf8)) == nil)
+    }
+
+    @Test("A leftover email in the settings file does not count as signed in")
+    func staleEmailIsCleared() throws {
+        let box = try Sandbox()
+        try box.store.add("work")
+        try box.write(#"{"oauthAccount":{"emailAddress":"old@x.example"}}"#,
+                      to: box.store.cliDir("work").appendingPathComponent(".claude.json"))
+        let guess = box.store.profile("work")
+        #expect(guess.codeSignedIn)  // the fast guess is fooled
+        let corrected = guess.applying(CodeLogin(signedIn: false, email: ""))
+        #expect(!corrected.codeSignedIn && corrected.email.isEmpty)
+        #expect(corrected.icon == guess.icon && corrected.desktopDir == guess.desktopDir)
+    }
+
+    @Test("A real login wins, and supplies the email")
+    func realLoginWins() {
+        let guess = Profile(name: "work", email: "", desktopSignedIn: true, cliDir: "", desktopDir: "/d")
+        #expect(guess.applying(CodeLogin(signedIn: true, email: "me@x.example")).email == "me@x.example")
+        #expect(guess.applying(CodeLogin(signedIn: true, email: "")).codeSignedIn)
+    }
+}
+
 @Suite("Which account a command uses")
 struct ResolutionTests {
     @Test("A typed name wins, then the environment, then the folder's file, then default")

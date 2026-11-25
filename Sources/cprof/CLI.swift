@@ -88,7 +88,7 @@ struct CLI {
     }
 
     private func list(json: Bool) throws {
-        let profiles = store.profiles()
+        let profiles = store.verifiedProfiles()
         if json {
             let entries = profiles.map {
                 ListEntry(name: $0.name, email: $0.email, icon: $0.icon,
@@ -120,7 +120,7 @@ struct CLI {
     private func remove(_ name: String, confirmed: Bool) throws {
         try store.require(name)
         guard name != Profile.defaultName else { throw SwitchboardError("refusing to delete the default account") }
-        let profile = store.profile(name)
+        let profile = store.verifiedProfiles().first { $0.name == name } ?? store.profile(name)
         if !confirmed {
             print("Delete account '\(name)' and all its data? [y/N] ", terminator: "")
             guard let reply = readLine(), reply.lowercased() == "y" else { print("Cancelled."); return }

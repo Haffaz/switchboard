@@ -104,7 +104,7 @@ Which account a command uses: a name you type, then `$CPROF_PROFILE`, then the n
 ## Security notes
 
 - **Sign-in codes are never stored or logged.** The log (`~/Library/Logs/Switchboard.log`) records only that a link arrived and where it went.
-- **Switchboard reads no tokens.** "Signed in" comes from the account ID and email that Claude writes to its own settings files.
+- **Switchboard reads no tokens.** For Claude Code it asks `claude auth status`, which answers yes or no and the email. For Claude Desktop it reads the account ID that Claude writes to its own settings file.
 - **A `.claude-profile` file picks the account for a folder**, and a cloned repository can contain one. It can only name an account you created, and `cprof` prints a notice when a folder's file chooses the account.
 - **The app is not sandboxed.** It has to start Claude and write to `~/.claude-profiles`.
 

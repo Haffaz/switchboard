@@ -66,7 +66,36 @@ public struct AccountStore: Sendable {
                 cliDir: cliDir(name).path, desktopDir: desktopDir(name)?.path ?? "", icon: icon(name))
     }
 
-    /// The email Claude Code is signed in with, read from its own state file.
+    /// Ask Claude Code about every account at once (about 0.2 s in total).
+    /// Accounts it could not be asked about are left out.
+    public func codeLogins(_ names: [String]) -> [String: CodeLogin] {
+        let results = Results(count: names.count)
+        DispatchQueue.concurrentPerform(iterations: names.count) { index in
+            let name = names[index]
+            let dir = name == Profile.defaultName ? nil : cliDir(name)
+            results.set(index, ClaudeCode.loginStatus(configDir: dir))
+        }
+        var logins: [String: CodeLogin] = [:]
+        for (index, name) in names.enumerated() { logins[name] = results.get(index) }
+        return logins
+    }
+
+    /// Accounts with their Claude Code login checked against Claude Code.
+    public func verifiedProfiles() -> [Profile] {
+        let base = profiles()
+        let logins = codeLogins(base.map(\.name))
+        return base.map { profile in logins[profile.name].map(profile.applying) ?? profile }
+    }
+
+    private final class Results: @unchecked Sendable {
+        private let lock = NSLock()
+        private var values: [CodeLogin?]
+        init(count: Int) { values = Array(repeating: nil, count: count) }
+        func set(_ index: Int, _ value: CodeLogin?) { lock.lock(); values[index] = value; lock.unlock() }
+        func get(_ index: Int) -> CodeLogin? { lock.lock(); defer { lock.unlock() }; return values[index] }
+    }
+
+    /// The email in Claude Code's settings file: a fast first guess only.
     func codeEmail(_ name: String) -> String {
         let file = name == Profile.defaultName ? paths.defaultCLIJSON : cliDir(name).appendingPathComponent(".claude.json")
         let account = Self.json(file)?["oauthAccount"] as? [String: Any]

@@ -4,6 +4,8 @@ import Foundation
 public struct Profile: Codable, Equatable, Sendable {
     public let name: String
     /// Email Claude Code is signed in with; empty if it is not signed in.
+    /// Read from its settings file first (a fast guess), then corrected by
+    /// `applying(_:)` once Claude Code has been asked.
     public let email: String
     public let desktopSignedIn: Bool
     public let cliDir: String
@@ -33,6 +35,14 @@ public struct Profile: Codable, Equatable, Sendable {
     }
 
     public var codeSignedIn: Bool { !email.isEmpty }
+
+    /// A copy corrected by what Claude Code itself reported. A signed-out
+    /// account loses the email its settings file may still hold.
+    public func applying(_ login: CodeLogin) -> Profile {
+        let verified = login.signedIn ? (login.email.isEmpty ? (email.isEmpty ? "signed in" : email) : login.email) : ""
+        return Profile(name: name, email: verified, desktopSignedIn: desktopSignedIn,
+                       cliDir: cliDir, desktopDir: desktopDir, icon: icon)
+    }
 
     /// The symbol to draw for this account: its own, or a neutral person.
     public var iconSymbol: String {

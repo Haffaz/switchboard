@@ -172,7 +172,7 @@ final class MenuController: NSObject, NSMenuDelegate {
     private func perform(_ work: @Sendable @escaping () throws -> Void) async -> Bool {
         do {
             try await Task.detached(operation: work).value
-            await store.refresh()
+            await store.refresh(recheckLogins: true)
             return true
         } catch {
             Dialogs.error(error.localizedDescription.prefix(1).uppercased() + error.localizedDescription.dropFirst())
