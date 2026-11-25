@@ -142,7 +142,7 @@ final class LinkRelay {
                   let app = ClaudeDesktop.running(profile) else {
                 Log.write("relay: \(name) is not running; sign-in dropped")
                 await stop()
-                Dialogs.error("Claude for “\(name)” was closed before the sign-in finished. Start the sign-in again.")
+                Dialogs.info("Sign-in was interrupted", "Claude was closed too early. Try again.")
                 return false
             }
             do {
@@ -155,8 +155,7 @@ final class LinkRelay {
                 case .retry: continue
                 case .openSettings:
                     Self.openAutomationSettings()
-                    if Dialogs.confirm("Allowed it?", "Turn on “Claude” under Switchboard, then click Try Again.",
-                                       button: "Try Again") { continue }
+                    if Dialogs.confirm("Turn on “Claude” under Switchboard", button: "Try Again") { continue }
                     await stop(); return false
                 case .cancel: await stop(); return false
                 }

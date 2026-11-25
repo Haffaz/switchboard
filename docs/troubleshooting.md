@@ -18,7 +18,7 @@ Open **System Settings → Privacy & Security → Automation**, find Switchboard
 
 If the sign-in is still waiting, Switchboard shows a dialog with **Open Settings** and **Try Again**. It holds the sign-in while you fix the setting.
 
-### "(account) is still signing in. Finish or cancel that first."
+### "Finish signing in to (account) first"
 
 Switchboard runs one sign-in at a time. Finish the first one, or wait: a sign-in that is never finished is abandoned after 10 minutes.
 
@@ -51,6 +51,14 @@ cprof link <name>
 ```
 
 It restores missing links and lists items the account keeps as its own. To go back to the shared version of one, delete the account's copy in `~/.claude-profiles/<name>/cli` and run the command again.
+
+## Keyboard shortcuts
+
+### Control-Option and a number does nothing
+
+Check that **Shortcuts ⌃⌥1–9** has a tick in the menu. If it does, another app may be using the same keys; window managers often do. Change the shortcut in that app, or leave Switchboard's off.
+
+The log says how many of the nine shortcuts macOS accepted, on the line starting `shortcuts: on`.
 
 ## Opening and quitting
 

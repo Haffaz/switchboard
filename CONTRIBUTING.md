@@ -41,6 +41,7 @@ Sources/Switchboard/          The menu bar app.
   DesktopSignIn.swift           the sign-in flow
   LinkRelay.swift               owning claude:// links during a sign-in
   Dialogs.swift                 every dialog, in one place
+  HotKeys.swift                 the system-wide keyboard shortcuts
   Demo.swift                    sample data and screenshots for the docs
 Sources/cprof/                The command-line tool.
 tests/SwitchboardCoreTests/   Unit tests for the core.
@@ -53,6 +54,7 @@ docs/                         The guides.
 - **A rule or a decision** goes in `SwitchboardCore`, with a test. Examples: what a valid account name is, which items are shared, where a link is routed.
 - **The app and `cprof` stay thin.** They read input, call the core, and show the result. If you are writing the same check in both, it belongs in the core.
 - **Wording shown to people** goes in `Dialogs.swift`, or in `CLI.swift` for `cprof`. Write it for someone who has never seen a terminal.
+- **Keep dialogs short.** One thing per dialog, in as few words as it takes, and no pop-up at all when something simply worked. Explanations belong in `docs/`.
 
 ## Guidelines
 

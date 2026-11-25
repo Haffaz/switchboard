@@ -60,6 +60,10 @@ final class MenuController: NSObject, NSMenuDelegate {
         if running.count > 1 { menu.addItem(item("Quit All Claude Desktops", #selector(quitAllClaude))) }
 
         menu.addItem(.separator())
+        let shortcuts = item("Shortcuts ⌃⌥1–9", #selector(toggleShortcuts))
+        shortcuts.state = HotKeys.shared.isEnabled ? .on : .off
+        shortcuts.toolTip = "Press Control-Option and a number anywhere to jump to that account's Claude."
+        menu.addItem(shortcuts)
         let login = item("Open at Login", #selector(toggleLoginItem))
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menu.addItem(login)
@@ -240,9 +244,7 @@ final class MenuController: NSObject, NSMenuDelegate {
         Log.write("quit \(profile.name): asked")
         if await ClaudeDesktop.quit(profile) { return }
         // Claude can refuse to quit while work is running.
-        if Dialogs.confirm("Claude (\(profile.displayName)) is still running",
-                           "It may be finishing work, or waiting for you in its own window. "
-                           + "Force quit it? Anything unsaved in that window is lost.", button: "Force Quit") {
+        if Dialogs.confirmForceQuit(profile.displayName) {
             ClaudeDesktop.forceQuit(profile)
             Log.write("quit \(profile.name): forced")
         }
@@ -264,7 +266,7 @@ final class MenuController: NSObject, NSMenuDelegate {
             else { return }
             let app = accounts.paths.home.appendingPathComponent("Applications/Claude (\(profile.name)).app")
             NSWorkspace.shared.activateFileViewerSelecting([app])
-            Dialogs.info("Dock icon ready", "Drag “Claude (\(profile.name))” from the Finder window to your Dock.")
+            Dialogs.info("Drag “Claude (\(profile.name))” to your Dock")
         }
     }
 
@@ -277,7 +279,7 @@ final class MenuController: NSObject, NSMenuDelegate {
         guard let profile = profile(sender), Dialogs.confirmRemove(profile.displayName) else { return }
         Task {
             guard await ClaudeDesktop.quit(profile) else {
-                Dialogs.error("Claude for “\(profile.displayName)” is still running. Quit it, then remove the account.")
+                Dialogs.error("Quit Claude for “\(profile.displayName)” first.")
                 return
             }
             let accounts = accounts
@@ -286,21 +288,23 @@ final class MenuController: NSObject, NSMenuDelegate {
                 !profile.codeSignedIn || ClaudeCode.signOut(configDir: accounts.cliDir(profile.name))
             }.value
             guard await perform({ try accounts.remove(profile.name) }) else { return }
-            Dialogs.info("Removed “\(profile.displayName)”", signedOut
-                ? "Its sign-in, history and settings are gone from this Mac."
-                : "Its history and settings are gone. Its Claude Code sign-in could not be removed from Keychain; "
-                  + "open Keychain Access and delete the newest “Claude Code-credentials” entry if you want it gone.")
+            // Say something only if a step did not work.
+            if !signedOut {
+                Dialogs.info("Removed, but still signed in to Claude Code",
+                             "To finish, delete the newest “Claude Code-credentials” entry in Keychain Access.")
+            }
         }
     }
 
+    /// One question (the name), then straight to signing in. Claude Code
+    /// signs in later, the first time it is opened for this account.
     @objc private func addAccount() {
-        guard let name = Dialogs.askNewAccountName() else { return }
+        let accounts = accounts
+        guard let typed = Dialogs.askNewAccountName(taken: { accounts.exists($0) }) else { return }
         Task {
-            let accounts = accounts
-            guard await perform({ try accounts.add(name) }), let profile = store.profile(named: name) else { return }
-            let next = Dialogs.afterCreate(name)
-            if next == .code || next == .both { openTerminal(profile, .signIn) }
-            if next == .desktop || next == .both { await DesktopSignIn.run(profile) }
+            guard await perform({ try accounts.create(typed) }),
+                  let name = ProfileName.slug(typed), let profile = store.profile(named: name) else { return }
+            await DesktopSignIn.run(profile)
         }
     }
 
@@ -314,12 +318,7 @@ final class MenuController: NSObject, NSMenuDelegate {
                 try fm.createSymbolicLink(at: link, withDestinationURL: target)
             }
             guard done else { return }
-            Dialogs.info("Command line tool installed", """
-                You can now run `cprof` in a terminal (it is in ~/.local/bin).
-
-                Optional: to make `claude` follow each folder's account, add this line to ~/.zshrc:
-                eval "$(cprof init zsh)"
-                """)
+            Dialogs.info("cprof is installed", "Run it in any terminal.")
         }
     }
 
@@ -328,14 +327,34 @@ final class MenuController: NSObject, NSMenuDelegate {
             if SMAppService.mainApp.status == .enabled { try SMAppService.mainApp.unregister() }
             else { try SMAppService.mainApp.register() }
         } catch {
-            Dialogs.error("Could not change Open at Login. Move the app to your Applications folder and try again.\n\n\(error.localizedDescription)")
+            Dialogs.error("Move Switchboard to your Applications folder, then try again.")
         }
     }
 
     @objc private func showHelp() {
-        guard Dialogs.help() == .showLog else { return }
-        Log.write("log opened")
-        NSWorkspace.shared.open(Log.fileURL)
+        switch Dialogs.help() {
+        case .done: break
+        case .guide: if let url = Dialogs.guideURL { NSWorkspace.shared.open(url) }
+        case .showLog:
+            Log.write("log opened")
+            NSWorkspace.shared.open(Log.fileURL)
+        }
+    }
+
+    @objc private func toggleShortcuts() {
+        HotKeys.shared.setEnabled(!HotKeys.shared.isEnabled)
+    }
+
+    /// A global shortcut was pressed: go to the account in that menu position.
+    func activateAccount(at index: Int) {
+        Task {
+            if store.profiles.isEmpty { await store.refresh() }
+            guard store.profiles.indices.contains(index) else { return }
+            let profile = store.profiles[index]
+            Log.write("shortcut \(index + 1): \(profile.name)")
+            if profile.needsDesktopSignIn { await DesktopSignIn.run(profile); return }
+            do { try await ClaudeDesktop.open(profile) } catch { Dialogs.error(error.localizedDescription) }
+        }
     }
     @objc private func quit() { NSApp.terminate(nil) }
 }

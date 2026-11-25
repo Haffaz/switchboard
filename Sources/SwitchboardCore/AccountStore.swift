@@ -147,6 +147,19 @@ public struct AccountStore: Sendable {
         return profile(name)
     }
 
+    /// Create an account from what someone typed. The account's fixed name
+    /// is a tidied form ("Client: ACME" -> `client-acme`), and what they
+    /// typed is kept as the name shown to them.
+    @discardableResult
+    public func create(_ typed: String) throws -> Profile {
+        guard let name = ProfileName.slug(typed) else {
+            throw SwitchboardError("use at least one letter or number in the name")
+        }
+        try add(name)
+        if let label = AccountLabel.clean(typed), label != name { try setLabel(name, to: label) }
+        return profile(name)
+    }
+
     /// Link shared items into an account. An item the account has replaced
     /// with its own real file is left alone; those are returned.
     @discardableResult

@@ -1,174 +1,141 @@
 import AppKit
 import SwitchboardCore
 
-/// All pop-up windows in one place, worded for people, not terminals.
+/// Every pop-up window, in one place. Each says one thing, in as few words
+/// as it takes. Details belong in the guides, not here.
 @MainActor
 enum Dialogs {
     /// Demo mode sets this, because a bare program has no app icon.
     static var iconOverride: NSImage?
 
-    private static func makeAlert() -> NSAlert {
+    static let guideURL = URL(string: "https://github.com/Haffaz/switchboard#documentation")
+
+    private static func makeAlert(_ title: String, _ text: String = "", style: NSAlert.Style = .informational) -> NSAlert {
         let alert = NSAlert()
+        alert.alertStyle = style
+        alert.messageText = title
+        alert.informativeText = text
         if let iconOverride { alert.icon = iconOverride }
         return alert
     }
 
-    enum NextStep { case both, desktop, code, later }
+    private static func run(_ alert: NSAlert) -> NSApplication.ModalResponse {
+        NSApp.activate(ignoringOtherApps: true)
+        return alert.runModal()
+    }
 
-    static func askNewAccountName() -> String? {
-        let alert = makeAlert()
-        alert.messageText = "Add a Claude account"
-        alert.informativeText = "Give it a short name you’ll recognise, like “Work” or “Personal”. "
-            + "You’ll sign in on the next step."
-        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 24))
-        field.placeholderString = "Work"
+    private static func nameField(_ value: String, placeholder: String, in alert: NSAlert) -> NSTextField {
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 24))
+        field.stringValue = value
+        field.placeholderString = placeholder
         alert.accessoryView = field
+        alert.window.initialFirstResponder = field
+        return field
+    }
+
+    // MARK: - Accounts
+
+    /// Ask what to call a new account. Returns the name as typed, or nil if
+    /// cancelled. `taken` says whether a name is already in use.
+    static func askNewAccountName(taken: (String) -> Bool) -> String? {
+        let alert = makeAlert("New Account")
+        let field = nameField("", placeholder: "Name, like Work", in: alert)
         alert.addButton(withTitle: "Add")
         alert.addButton(withTitle: "Cancel")
-        alert.window.initialFirstResponder = field
-        NSApp.activate(ignoringOtherApps: true)
-
-        while alert.runModal() == .alertFirstButtonReturn {
-            guard let slug = ProfileName.slug(field.stringValue) else {
-                alert.informativeText = "Please type a name using letters or numbers."
+        while run(alert) == .alertFirstButtonReturn {
+            guard let typed = AccountLabel.clean(field.stringValue), let slug = ProfileName.slug(typed) else {
+                alert.informativeText = "Use at least one letter or number."
                 continue
             }
-            if slug == "default" {
-                alert.informativeText = "“Default” is your usual setup. Please pick another name."
+            if slug == Profile.defaultName || taken(slug) {
+                alert.informativeText = "That name is taken."
                 continue
             }
-            return slug
+            return typed
         }
         return nil
     }
 
-    /// Ask for a new display name. Nil means cancelled; an empty string
-    /// means "go back to the original name".
+    /// Ask for a new shown name. Nil means cancelled; an empty string means
+    /// "go back to the original name".
     static func askRename(current: String, original: String) -> String? {
-        let alert = makeAlert()
-        alert.messageText = "Rename “\(current)”"
-        alert.informativeText = "This changes the name shown in the menu. Sign-ins, history and files stay as they are."
-        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 24))
-        field.stringValue = current
-        field.placeholderString = original
-        alert.accessoryView = field
+        let alert = makeAlert("Rename")
+        let field = nameField(current, placeholder: original, in: alert)
         alert.addButton(withTitle: "Rename")
         alert.addButton(withTitle: "Cancel")
-        alert.window.initialFirstResponder = field
-        NSApp.activate(ignoringOtherApps: true)
-        guard alert.runModal() == .alertFirstButtonReturn else { return nil }
+        guard run(alert) == .alertFirstButtonReturn else { return nil }
         return AccountLabel.clean(field.stringValue) ?? ""
     }
 
-    static func afterCreate(_ name: String) -> NextStep {
-        let alert = makeAlert()
-        alert.messageText = "“\(name)” is ready. Sign in now?"
-        alert.informativeText = "Claude Desktop and Claude Code each have their own sign-in. "
-            + "Sign in to the same account in both, or only the one you use."
-        alert.addButton(withTitle: "Sign In to Both")
-        alert.addButton(withTitle: "Only Claude Desktop")
-        alert.addButton(withTitle: "Only Claude Code")
-        alert.addButton(withTitle: "Later")
-        NSApp.activate(ignoringOtherApps: true)
-        switch alert.runModal() {
-        case .alertFirstButtonReturn: return .both
-        case .alertSecondButtonReturn: return .desktop
-        case .alertThirdButtonReturn: return .code
-        default: return .later
-        }
-    }
-
     static func confirmRemove(_ name: String) -> Bool {
-        let alert = makeAlert()
-        alert.alertStyle = .warning
-        alert.messageText = "Remove “\(name)”?"
-        alert.informativeText = "This signs “\(name)” out of Claude Code and deletes its chat history "
-            + "and settings on this Mac. Your Claude account itself is not affected. "
-            + "Quit its Claude Desktop window first."
+        let alert = makeAlert("Remove “\(name)”?", "Its chats and settings on this Mac will be deleted.", style: .warning)
         alert.addButton(withTitle: "Remove")
         alert.addButton(withTitle: "Cancel")
         alert.buttons.first?.hasDestructiveAction = true
-        NSApp.activate(ignoringOtherApps: true)
-        return alert.runModal() == .alertFirstButtonReturn
+        return run(alert) == .alertFirstButtonReturn
     }
 
-    /// Explains the Claude Desktop sign-in before it starts.
-    static func signInIntro(_ name: String) -> Bool {
-        confirm("Sign in to Claude Desktop as “\(name)”", """
-            After you click Continue:
-            1. Sign in in the Claude window that opens (Google or email).
-            2. When your browser asks, click “Open Claude”.
-
-            Switchboard sends you back to the right window. Your other Claude windows stay open.
-            """, button: "Continue")
-    }
-
-    static func confirm(_ title: String, _ text: String, button: String) -> Bool {
-        let alert = makeAlert()
-        alert.messageText = title
-        alert.informativeText = text
-        alert.addButton(withTitle: button)
+    static func confirmForceQuit(_ name: String) -> Bool {
+        let alert = makeAlert("Claude (\(name)) is still running",
+                              "Force quit it? Unsaved work in that window is lost.", style: .warning)
+        alert.addButton(withTitle: "Force Quit")
         alert.addButton(withTitle: "Cancel")
-        NSApp.activate(ignoringOtherApps: true)
-        return alert.runModal() == .alertFirstButtonReturn
+        return run(alert) == .alertFirstButtonReturn
     }
+
+    // MARK: - Sign-in
 
     enum DeliveryChoice { case retry, openSettings, cancel }
 
-    static func deliveryFailed(_ profile: String) -> DeliveryChoice {
-        let alert = makeAlert()
-        alert.alertStyle = .warning
-        alert.messageText = "Almost there: allow Switchboard to talk to Claude"
-        alert.informativeText = "Switchboard caught the sign-in for “\(profile)” but macOS blocked passing it on. "
-            + "Allow Switchboard to control Claude in System Settings → Privacy & Security → Automation."
+    static func deliveryFailed(_ name: String) -> DeliveryChoice {
+        let alert = makeAlert("Allow Switchboard to control Claude",
+                              "System Settings → Privacy & Security → Automation.", style: .warning)
         alert.addButton(withTitle: "Open Settings")
         alert.addButton(withTitle: "Try Again")
         alert.addButton(withTitle: "Cancel")
-        NSApp.activate(ignoringOtherApps: true)
-        switch alert.runModal() {
+        switch run(alert) {
         case .alertFirstButtonReturn: return .openSettings
         case .alertSecondButtonReturn: return .retry
         default: return .cancel
         }
     }
 
-    static func info(_ title: String, _ text: String) {
-        show(title, text, style: .informational)
+    /// One plain question with a single action and Cancel.
+    static func confirm(_ title: String, _ text: String = "", button: String) -> Bool {
+        let alert = makeAlert(title, text)
+        alert.addButton(withTitle: button)
+        alert.addButton(withTitle: "Cancel")
+        return run(alert) == .alertFirstButtonReturn
+    }
+
+    // MARK: - Messages
+
+    static func info(_ title: String, _ text: String = "") {
+        _ = run(makeAlert(title, text))
     }
 
     static func error(_ text: String) {
-        show("Something went wrong", text, style: .warning)
+        _ = run(makeAlert("Something went wrong", text, style: .warning))
     }
 
-    enum HelpChoice { case done, showLog }
+    enum HelpChoice { case done, guide, showLog }
 
     static func help() -> HelpChoice {
-        let alert = makeAlert()
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-        alert.messageText = version.map { "Switchboard \($0)" } ?? "Switchboard"
-        alert.informativeText = """
-            Each account has its own Claude Desktop and its own Claude Code sign-in.
+        let alert = makeAlert(version.map { "Switchboard \($0)" } ?? "Switchboard", """
+            Click an account to open its Claude Desktop.
+            Point at it for Claude Code and more.
+            A green dot means it is running.
 
-            • Point at an account to see its actions. Clicking the account opens its Claude Desktop.
-            • A green dot means that account’s Claude Desktop is running. Closing its window leaves it running; choose Quit Claude Desktop to stop it.
-            • ⌘1, ⌘2… open Claude Desktop and ⇧⌘1, ⇧⌘2… open Claude Code while the menu is open.
-            • “Default” is the setup you had before. It is never changed.
-            • Your CLAUDE.md, rules, agents, skills and settings are shared by every account. Chat history, sign-in and MCP servers stay separate.
-
-            Switchboard is an independent tool, not made by Anthropic.
-            """
+            Not affiliated with Anthropic.
+            """)
         alert.addButton(withTitle: "Done")
+        alert.addButton(withTitle: "Open Guide")
         alert.addButton(withTitle: "Show Log")
-        NSApp.activate(ignoringOtherApps: true)
-        return alert.runModal() == .alertSecondButtonReturn ? .showLog : .done
-    }
-
-    private static func show(_ title: String, _ text: String, style: NSAlert.Style) {
-        let alert = makeAlert()
-        alert.alertStyle = style
-        alert.messageText = title
-        alert.informativeText = text
-        NSApp.activate(ignoringOtherApps: true)
-        alert.runModal()
+        switch run(alert) {
+        case .alertSecondButtonReturn: return .guide
+        case .alertThirdButtonReturn: return .showLog
+        default: return .done
+        }
     }
 }

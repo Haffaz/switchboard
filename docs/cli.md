@@ -51,6 +51,13 @@ Creates an account: its folders, and links to your shared rules, agents, skills 
 cprof add work
 ```
 
+You can type the name the way you want it shown. The account's own name is a tidied form of it:
+
+```
+$ cprof add My Work
+Created my-work (shown as My Work).
+```
+
 ### `cprof rm <name> [--yes]`
 
 Signs the account out of Claude Code and deletes its folders. It asks first unless you pass `--yes`. Quit that account's Claude Desktop before removing it. `default` cannot be removed.

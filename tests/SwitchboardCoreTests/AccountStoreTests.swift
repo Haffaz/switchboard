@@ -145,6 +145,36 @@ struct AccountDetailTests {
     }
 }
 
+@Suite("Creating an account from a typed name")
+struct CreateTests {
+    @Test("The name is kept as typed, and only the folder name is tidied", arguments: [
+        ("Personal", "personal", "Personal"), ("Client: ACME Inc.", "client-acme-inc", "Client: ACME Inc."),
+        ("  Day   Job ", "day-job", "Day Job"),
+    ])
+    func keepsTypedName(typed: String, name: String, shown: String) throws {
+        let box = try Sandbox()
+        let profile = try box.store.create(typed)
+        #expect(profile.name == name && profile.displayName == shown)
+        #expect(box.exists(box.store.cliDir(name)))
+    }
+
+    @Test("A name that is already tidy gets no separate label")
+    func plainNameHasNoLabel() throws {
+        let box = try Sandbox()
+        #expect(try box.store.create("work").label == nil)
+    }
+
+    @Test("Names that tidy to the same thing clash, and nothing usable is refused")
+    func clashesAndEmpties() throws {
+        let box = try Sandbox()
+        try box.store.create("Work")
+        #expect(throws: SwitchboardError.self) { try box.store.create("WORK") }
+        #expect(throws: SwitchboardError.self) { try box.store.create("Default") }
+        #expect(throws: SwitchboardError.self) { try box.store.create("!!!") }
+        #expect(box.store.names() == ["default", "work"])
+    }
+}
+
 @Suite("Renaming accounts")
 struct RenameTests {
     @Test("Any account can be renamed, including the default one")

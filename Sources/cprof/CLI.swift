@@ -13,7 +13,7 @@ struct CLI {
         Usage: cprof <command> [args]
 
           list [--json]          List accounts and who is signed in (the default command)
-          add <name>             Create an account (shares rules/agents/skills with ~/.claude)
+          add <name>             Create an account; "add My Work" is shown as My Work, used as my-work
           rm <name> [--yes]      Sign out and delete an account and its data
           rename <name> [label]  Change the name shown for an account; no label resets it
           icon <name> [symbol]   Set an account's menu icon (e.g. briefcase); no symbol clears it
@@ -41,7 +41,7 @@ struct CLI {
         let command = args.isEmpty ? "list" : args.removeFirst()
         switch command {
         case "list", "ls": try list(json: args.first == "--json")
-        case "add": try add(try name(args, usage: "cprof add <name>"))
+        case "add": try add(args)
         case "rm", "remove": try remove(try name(args, usage: "cprof rm <name>"), confirmed: args.contains("--yes"))
         case "rename": try rename(try name(args, usage: "cprof rename <name> [label]"), Array(args.dropFirst()))
         case "icon": try icon(try name(args, usage: "cprof icon <name> [symbol]"), args.count > 1 ? args[1] : nil)
@@ -111,12 +111,15 @@ struct CLI {
         }
     }
 
-    private func add(_ rawName: String) throws {
-        try store.add(rawName)
+    /// `cprof add Work Stuff` makes the account `work-stuff`, shown as "Work Stuff".
+    private func add(_ words: [String]) throws {
+        guard !words.isEmpty, !words[0].hasPrefix("-") else { throw SwitchboardError("usage: cprof add <name>") }
+        let profile = try store.create(words.joined(separator: " "))
+        let shown = profile.label.map { " (shown as \($0))" } ?? ""
         print("""
-            Created \(rawName). Sign in with:
-              cprof login \(rawName)      (Claude Code)
-              cprof desktop \(rawName)    (Claude Desktop)
+            Created \(profile.name)\(shown). Sign in with:
+              cprof login \(profile.name)      (Claude Code)
+              cprof desktop \(profile.name)    (Claude Desktop)
             """)
     }
 

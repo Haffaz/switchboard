@@ -1,48 +1,50 @@
-<p align="center"><img src="design/icon-1024.png" width="128" alt="Switchboard icon"></p>
+<p align="center"><img src="design/icon-1024.png" width="112" alt="Switchboard icon"></p>
 
 <h1 align="center">Switchboard</h1>
 
-<p align="center">Run several Claude accounts on one Mac, side by side.</p>
+<p align="center"><b>Use all your Claude accounts at once on one Mac.</b><br>
+A menu bar app for Claude Desktop and Claude Code.</p>
 
 <p align="center">
   <img src="docs/images/menu.png" width="372" alt="The Switchboard menu: four accounts, two with a green dot because their Claude Desktop is running">
-  <img src="docs/images/account-menu.png" width="352" alt="One account's menu: Open Claude Desktop, Open Claude Code, Open Terminal, Quit, Icon, sign in again, Add Dock Icon, Show Files, Remove Account">
+  <img src="docs/images/account-menu.png" width="352" alt="One account's menu: Open Claude Desktop, Open Claude Code, Open Terminal, Quit, Rename, Icon, and more">
 </p>
 
-Switchboard is a menu bar app for people who use more than one Claude account, such as a work account and a personal one. Each account gets its own Claude Desktop window and its own Claude Code sign-in, and they all run at the same time. No signing out and back in.
+## Why
 
-It comes with `cprof`, a command-line tool that does the same things from a terminal.
+Claude's apps hold one account at a time. If you have a work account and a personal one, switching means signing out and back in, and you can never have both open.
 
-> Switchboard is an independent project. It is not made by or affiliated with Anthropic.
+Switchboard gives each account its own Claude Desktop window and its own Claude Code sign-in. They run side by side, and you move between them from the menu bar or the keyboard.
 
-## What it does
+## Features
 
-- **One menu for all your accounts.** Open any account's Claude Desktop or Claude Code in a click. A green dot shows which ones are running.
-- **Accounts run side by side.** Each has its own sign-in, chat history and projects.
-- **Your setup is shared.** Your `CLAUDE.md`, rules, agents, skills, hooks and settings apply to every account, from one place.
-- **Sign-in that goes to the right window.** With several Claude copies open, a browser sign-in normally lands in the wrong one. Switchboard routes it to the account you are signing in.
-- **Folders can remember their account.** Pin a project folder to an account, and `claude` uses it there.
-- **Your existing setup is untouched.** It becomes the "Default" account, which you can rename. Switchboard never moves or changes it.
+- **Every account, one click away.** Open any account's Claude Desktop or Claude Code from the menu. A green dot shows which are running.
+- **Truly side by side.** Each account has its own sign-in, chats and projects. Nothing is signed out to make room.
+- **One shared setup.** Your `CLAUDE.md`, rules, agents, skills, hooks and settings apply to every account, from one place.
+- **Keyboard switching.** Control-Option-1 to 9 jump to an account's Claude from any app.
+- **Per-project accounts.** Pin a folder to an account, and `claude` uses it there.
+- **A command-line twin.** `cprof` does everything the menu does, for scripts and terminals.
+- **Leaves your setup alone.** Your current Claude becomes the "Default" account. Switchboard never moves or changes it.
 
 ## Install
 
-> **No release yet.** The Homebrew and download options start working with the first release. Until then, use [Build from source](#build-from-source).
+> **No release yet.** Homebrew and the download start working with the first release. Until then, [build from source](#build-from-source).
 
-### Homebrew
+**Homebrew**
 
 ```bash
 brew install --cask haffaz/tap/switchboard
 ```
 
-This installs the app and puts the `cprof` command on your `PATH`. If Homebrew says the tap is not trusted, run `brew trust haffaz/tap` and install again.
+This also puts `cprof` on your `PATH`. If Homebrew says the tap is not trusted, run `brew trust haffaz/tap` and install again.
 
-### Download
+**Download**
 
-Get `Switchboard-<version>.dmg` from the [Releases page](https://github.com/Haffaz/switchboard/releases), open it, and drag Switchboard to Applications. The app is signed and notarized, so it opens without a warning.
+Get the latest `Switchboard.dmg` from [Releases](https://github.com/Haffaz/switchboard/releases), open it, and drag Switchboard to Applications. It is signed and notarized, so it opens without a warning.
 
 ### Build from source
 
-You need macOS 14 or later and Xcode 16 or later (for Swift 6).
+Needs macOS 14 or later and Xcode 16 or later.
 
 ```bash
 git clone https://github.com/Haffaz/switchboard.git
@@ -52,34 +54,58 @@ git clone https://github.com/Haffaz/switchboard.git
 cd switchboard && ./build.sh --install
 ```
 
-That builds **Switchboard.app**, copies it to `/Applications` and opens it.
+## Get started
 
-However you install it, look for the two-cog icon in your menu bar.
+1. Click the two-cog icon in your menu bar and choose **Add Account…**.
+2. Type a name, such as "Work".
+3. Sign in in the Claude window that opens.
 
-## Quick start
+That's it. Click an account to open its Claude Desktop, or point at it for Claude Code and everything else. The [getting started guide](docs/getting-started.md) has pictures of each step.
 
-1. Click the menu bar icon and choose **Add Account…**. Type a name such as "Work".
-2. Choose **Sign In to Both**. Sign in to Claude Desktop in the window that opens, and to Claude Code in the Terminal window.
-3. From then on, click an account to open its Claude Desktop, or point at it for everything else.
+## How it works
 
-The [getting started guide](docs/getting-started.md) walks through each step with pictures.
+Switchboard does not modify Claude. It starts Claude's own apps so that each account gets separate storage:
+
+| | Kept separate by |
+|---|---|
+| **Claude Code** | its `CLAUDE_CONFIG_DIR` setting, one folder per account |
+| **Claude Desktop** | a separate copy of the app with its own data folder |
+
+Your shared setup is linked into each account, so it stays in one place. [How it works](docs/how-it-works.md) covers the details, including how sign-in reaches the right window.
+
+## Questions
+
+**Is it safe to use with my accounts?**
+Switchboard never reads tokens, passwords or Keychain items, and never stores or logs sign-in codes. It contains no third-party code and makes no network requests of its own. [What it reads](docs/how-it-works.md#what-switchboard-reads) lists everything.
+
+**Will it break my current Claude?**
+No. Your existing setup is the Default account. Switchboard only reads it.
+
+**Why does macOS ask to let Switchboard control Claude?**
+To bring a specific account's window to the front, and to hand a sign-in to the right window. [Details](docs/how-it-works.md#why-macos-asks-for-permission).
+
+**Could a Claude update break it?**
+Possibly. It relies on two behaviours of Claude's apps, described above. If either changes, Switchboard will need an update.
+
+**How do I remove it?**
+See [Uninstalling](docs/troubleshooting.md#uninstalling). Your Default account is untouched.
 
 ## Documentation
 
 | Guide | What is in it |
 |---|---|
-| [Getting started](docs/getting-started.md) | Install, add your first account, sign in, everyday use |
-| [How it works](docs/how-it-works.md) | What is shared and what is separate, how sign-in is routed, what Switchboard reads |
+| [Getting started](docs/getting-started.md) | Install, add an account, sign in, everyday use |
+| [How it works](docs/how-it-works.md) | What is shared, how sign-in is routed, what Switchboard reads |
 | [The `cprof` command](docs/cli.md) | Every command, with examples |
 | [Troubleshooting](docs/troubleshooting.md) | Fixes for common problems, and how to uninstall |
-| [Contributing](CONTRIBUTING.md) | Build, test, project layout, making a signed release |
+| [Contributing](CONTRIBUTING.md) | Build, test, project layout, making a release |
 
-## Good to know
+## Contributing
 
-- **Sign-in codes are never stored or logged, and Switchboard reads no tokens.** Details are in [How it works](docs/how-it-works.md#what-switchboard-reads).
-- **It relies on two behaviours of Claude's apps**: Claude Code's `CLAUDE_CONFIG_DIR` setting, and Claude Desktop accepting a separate data folder. A future Claude update could change either.
-- **The app is not sandboxed.** It has to start Claude and manage account folders in your home folder.
+Bug reports and pull requests are welcome. Switchboard is a small Swift codebase with no dependencies, so it is quick to read. Start with [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+Switchboard is an independent project. It is not made by or affiliated with Anthropic. Claude is a trademark of Anthropic.

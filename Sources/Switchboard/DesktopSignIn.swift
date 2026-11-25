@@ -9,12 +9,9 @@ enum DesktopSignIn {
     static func run(_ profile: Profile) async {
         if let busy = LinkRelay.shared.signingIn, busy != profile.name {
             let busyName = ProfileStore.shared.profile(named: busy)?.displayName ?? busy
-            Dialogs.info("One sign-in at a time",
-                         "“\(busyName)” is still signing in. Finish that first, then try “\(profile.displayName)”.")
+            Dialogs.info("Finish signing in to “\(busyName)” first")
             return
         }
-        // Shown first: a dialog left open later would hold back the link.
-        guard Dialogs.signInIntro(profile.displayName) else { return }
 
         Log.write("sign-in \(profile.name): start")
         let app: NSRunningApplication
@@ -29,7 +26,7 @@ enum DesktopSignIn {
 
         do { try await LinkRelay.shared.start(for: profile.name) } catch {
             Log.write("sign-in \(profile.name): could not take over links: \(error.localizedDescription)")
-            Dialogs.error("Switchboard could not take over sign-in links: \(error.localizedDescription)")
+            Dialogs.error(error.localizedDescription)
             return
         }
         let name = profile.name
@@ -89,13 +86,11 @@ enum DesktopSignIn {
         }
         await LinkRelay.shared.stop()
         Log.write("sign-in \(name): \(confirmed ? "done" : "sent, not confirmed")")
-        let shown = ProfileStore.shared.profile(named: name)?.displayName ?? name
-        if confirmed {
-            Dialogs.info("“\(shown)” is signed in", "Claude Desktop for “\(shown)” is ready.")
-        } else {
-            Dialogs.info("Check the Claude window for “\(shown)”",
-                         "Switchboard passed the sign-in on, but Claude has not confirmed it yet. "
-                         + "If its window still shows the sign-in page, try again.")
+        // A finished sign-in needs no pop-up: the Claude window shows it.
+        // Speak up only when it may not have worked.
+        if !confirmed {
+            let shown = ProfileStore.shared.profile(named: name)?.displayName ?? name
+            Dialogs.info("Check the Claude window for “\(shown)”", "If it still asks you to sign in, try again.")
         }
     }
 

@@ -14,11 +14,11 @@ enum Demo {
         Profile(name: "default", email: "you@personal.example", desktopSignedIn: true,
                 cliDir: "", desktopDir: "", icon: "house"),
         Profile(name: "work", email: "you@company.example", desktopSignedIn: true,
-                cliDir: "", desktopDir: "/demo/work", icon: "briefcase"),
+                cliDir: "", desktopDir: "/demo/work", icon: "briefcase", label: "Work"),
         Profile(name: "client-acme", email: "you@acme.example", desktopSignedIn: true,
-                cliDir: "", desktopDir: "/demo/client-acme", icon: "building.2"),
+                cliDir: "", desktopDir: "/demo/client-acme", icon: "building.2", label: "Client ACME"),
         Profile(name: "side-project", email: "", desktopSignedIn: false,
-                cliDir: "", desktopDir: "/demo/side-project", icon: "hammer"),
+                cliDir: "", desktopDir: "/demo/side-project", icon: "hammer", label: "Side Project"),
     ]
     static let running: Set<String> = ["default", "client-acme"]
 
@@ -65,17 +65,11 @@ enum Demo {
                 accountMenu.popUp(positioning: nil, at: point, in: nil)
             }
         }
+        failures += shoot(output.appendingPathComponent("add-account.png"), dismiss: { NSApp.abortModal() }) {
+            _ = Dialogs.askNewAccountName(taken: { _ in false })
+        }
         failures += shoot(output.appendingPathComponent("rename.png"), dismiss: { NSApp.abortModal() }) {
             _ = Dialogs.askRename(current: "Default", original: "Default")
-        }
-        failures += shoot(output.appendingPathComponent("add-account.png"), dismiss: { NSApp.abortModal() }) {
-            _ = Dialogs.askNewAccountName()
-        }
-        failures += shoot(output.appendingPathComponent("sign-in-choice.png"), dismiss: { NSApp.abortModal() }) {
-            _ = Dialogs.afterCreate("work")
-        }
-        failures += shoot(output.appendingPathComponent("sign-in-steps.png"), dismiss: { NSApp.abortModal() }) {
-            _ = Dialogs.signInIntro("work")
         }
         return failures
     }

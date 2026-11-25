@@ -45,33 +45,19 @@ To have it there after every restart, click the icon and choose **Open at Login*
 
 Click the menu bar icon and choose **Add Account…**.
 
-<p align="center"><img src="images/add-account.png" width="348" alt="The Add a Claude account dialog, with a text field for the name"></p>
+<p align="center"><img src="images/add-account.png" width="328" alt="The New Account dialog: one text field for the name"></p>
 
-Type a short name you will recognise, such as "Work". Switchboard tidies it into a simple form: "Client: ACME Inc." becomes `client-acme-inc`.
+Type a name, such as "Work", and click **Add**. The name is kept exactly as you type it.
 
 ## 3. Sign in
 
-Switchboard asks which parts to sign in.
+A new Claude window opens for the account right away. Sign in there with Google or email, as you normally would.
 
-<p align="center"><img src="images/sign-in-choice.png" width="316" alt="The sign-in dialog with four choices: Sign In to Both, Only Claude Desktop, Only Claude Code, Later"></p>
+Your other Claude windows stay open and signed in. When the new window shows your chats, you are done.
 
-Claude Desktop and Claude Code keep separate sign-ins, even for the same Claude account. Choose **Sign In to Both** unless you use only one of them. You can do the other later from the account's menu.
+**The first time**, macOS may ask whether Switchboard may control Claude. Click **Allow**. [How it works](how-it-works.md#signing-in-to-claude-desktop) explains why.
 
-### Claude Desktop
-
-<p align="center"><img src="images/sign-in-steps.png" width="316" alt="The dialog that explains the two sign-in steps"></p>
-
-1. Click **Continue**. A new Claude window opens for this account.
-2. Sign in there with Google or email. Claude shows a sign-in sheet, or opens your browser.
-3. If your browser asks, click **Open Claude**.
-
-When Claude has saved the sign-in, Switchboard tells you the account is ready. Your other Claude windows stay open and signed in.
-
-**The first time**, macOS asks whether Switchboard may control Claude. Click **Allow**. Switchboard needs this to pass the sign-in to one specific Claude window. [How it works](how-it-works.md#signing-in-to-claude-desktop) explains why.
-
-### Claude Code
-
-A Terminal window opens and runs Claude Code's sign-in for this account. Follow its prompts, then close the window.
+**Claude Code** has its own sign-in. The first time you choose **Open Claude Code** for the account, the menu reads **Sign In to Claude Code…** and opens a Terminal window that signs it in.
 
 ## 4. Everyday use
 
@@ -86,6 +72,10 @@ A Terminal window opens and runs Claude Code's sign-in for this account. Follow 
 - A **Sign In** badge means Claude Desktop is not signed in for that account yet.
 - While the menu is open, **⌘1, ⌘2…** open Claude Desktop for the first nine accounts, and **⇧⌘1, ⇧⌘2…** open Claude Code.
 
+### Switching accounts from the keyboard
+
+Turn on **Shortcuts ⌃⌥1–9** in the menu. From then on, **Control-Option-1** jumps to the first account's Claude from any app, **Control-Option-2** to the second, and so on, in the order the menu lists them. If that account's Claude is not running, it opens.
+
 ### Quitting an account
 
 Closing a Claude window does not quit that Claude. It keeps running in the background, like any Mac app. With several copies that look the same, that is easy to miss.
@@ -96,7 +86,7 @@ To stop one, point at the account and choose **Quit Claude Desktop**. When two o
 
 Point at an account and choose **Rename…** to change the name shown in the menu. This works for every account, including Default.
 
-<p align="center"><img src="images/rename.png" width="348" alt="The Rename dialog, with a text field holding the current name"></p>
+<p align="center"><img src="images/rename.png" width="328" alt="The Rename dialog: one text field holding the current name"></p>
 
 Renaming changes only what you see. Sign-ins, chat history and files stay where they are. Clear the field to go back to the original name.
 
