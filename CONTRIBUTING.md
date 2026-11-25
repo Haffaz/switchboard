@@ -72,6 +72,16 @@ swift build && "$(swift build --show-bin-path)/Switchboard" --demo-screenshots d
 
 Menus and dialogs flash on screen for a few seconds while it captures them. It reads no real account and needs no Screen Recording permission. Run it from the project folder, so the dialogs can show the project's icon.
 
+## Checking the sign-in relay
+
+The part that holds `claude://` links during a sign-in cannot be unit tested, because it changes a system setting. There is a self-test instead:
+
+```bash
+open -a /Applications/Switchboard.app --args --relay-selftest
+```
+
+It holds the links for 12 seconds, takes them back if another app claims them in that time, then returns them and quits. The log shows each step. No account is touched.
+
 ## Changing the icon
 
 The app icon and the menu bar icon are drawn by code: `tools/make-icon.swift` and `MenuItems.barIcon()`. Keep the two in step. `./build.sh` redraws the app icon when the script changes.

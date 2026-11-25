@@ -1,4 +1,5 @@
 import AppKit
+import SwitchboardCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -10,7 +11,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // If an earlier run stopped mid sign-in, hand claude:// links back.
             await LinkRelay.returnLinks()
             await ProfileStore.shared.refresh()
+            if CommandLine.arguments.contains("--relay-selftest") { await relaySelfTest() }
         }
+    }
+
+    /// `Switchboard --relay-selftest`: hold the claude:// links for 12
+    /// seconds, as during a sign-in, then give them back and quit. Used to
+    /// check that links claimed by another app in that time are taken back.
+    /// The outcome is in the log. No account is touched.
+    private func relaySelfTest() async {
+        Log.write("selftest: start")
+        do { try await LinkRelay.shared.start(for: "selftest") } catch {
+            Log.write("selftest: could not take the links: \(error.localizedDescription)")
+        }
+        try? await Task.sleep(for: .seconds(12))
+        await LinkRelay.shared.stop()
+        Log.write("selftest: end")
+        NSApp.terminate(nil)
     }
 
     /// claude:// links arrive here only while Switchboard is relaying a sign-in.

@@ -8,6 +8,14 @@ import SwitchboardCore
 /// sign-in, Switchboard becomes the handler for `claude://`, passes the
 /// sign-in link to the account that asked for it, passes every other link
 /// to the default Claude, and then gives the links back.
+///
+/// Two facts about Claude Desktop shape this:
+/// - Every Claude copy claims `claude://` for itself when it starts. So
+///   Switchboard keeps watch and takes the links back for as long as the
+///   sign-in lasts.
+/// - When Claude sees it is not the `claude://` handler, it signs in through
+///   its own sign-in sheet and needs no link at all. That is the usual path
+///   here; passing a link on is the fallback.
 @MainActor
 final class LinkRelay {
     static let shared = LinkRelay()
@@ -18,6 +26,7 @@ final class LinkRelay {
     /// would make it impossible to know whose link arrived.
     private(set) var signingIn: String?
     private var expiry: Task<Void, Never>?
+    private var watch: Task<Void, Never>?
     var onSignInDelivered: ((String) -> Void)?
 
     // MARK: - Owning the links
@@ -26,11 +35,10 @@ final class LinkRelay {
         if let current = signingIn, current != profile {
             throw SwitchboardError("“\(current)” is still signing in. Finish or cancel that first.")
         }
-        let me = Bundle.main.bundleURL
-        if let owner = Self.currentHandler(), !Self.same(owner, me) {
+        if let owner = Self.currentHandler(), !Self.same(owner, Bundle.main.bundleURL) {
             UserDefaults.standard.set(owner.path, forKey: Self.previousHandlerKey)
         }
-        try await NSWorkspace.shared.setDefaultApplication(at: me, toOpenURLsWithScheme: LinkRouter.scheme)
+        try await Self.takeLinks()
         signingIn = profile
         expiry?.cancel()
         expiry = Task { [weak self] in
@@ -40,7 +48,32 @@ final class LinkRelay {
             self.expiry = nil
             await self.finish()
         }
+        keepLinks()
         Log.write("relay: on for \(profile)")
+    }
+
+    private static func takeLinks() async throws {
+        try await NSWorkspace.shared.setDefaultApplication(at: Bundle.main.bundleURL,
+                                                           toOpenURLsWithScheme: LinkRouter.scheme)
+    }
+
+    /// A Claude copy that starts during the sign-in claims `claude://` back.
+    /// Check once a second and take the links again when that happens.
+    private func keepLinks() {
+        watch?.cancel()
+        watch = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled, let self, self.signingIn != nil else { return }
+                guard let owner = Self.currentHandler(), !Self.same(owner, Bundle.main.bundleURL) else { continue }
+                do {
+                    try await Self.takeLinks()
+                    Log.write("relay: \(owner.lastPathComponent) had claimed the links; took them back")
+                } catch {
+                    Log.write("relay: could not take the links back: \(error.localizedDescription)")
+                }
+            }
+        }
     }
 
     func stop() async {
@@ -50,6 +83,8 @@ final class LinkRelay {
     }
 
     private func finish() async {
+        watch?.cancel()
+        watch = nil
         if signingIn != nil { Log.write("relay: off") }
         signingIn = nil
         onSignInDelivered = nil

@@ -62,10 +62,10 @@ Claude Desktop and Claude Code keep separate sign-ins, even for the same Claude 
 <p align="center"><img src="images/sign-in-steps.png" width="316" alt="The dialog that explains the two sign-in steps"></p>
 
 1. Click **Continue**. A new Claude window opens for this account.
-2. Sign in there with Google or email. Your browser opens.
-3. When the browser asks, click **Open Claude**.
+2. Sign in there with Google or email. Claude shows a sign-in sheet, or opens your browser.
+3. If your browser asks, click **Open Claude**.
 
-Switchboard sends you back to the new account's window. Your other Claude windows stay open and signed in.
+When Claude has saved the sign-in, Switchboard tells you the account is ready. Your other Claude windows stay open and signed in.
 
 **The first time**, macOS asks whether Switchboard may control Claude. Click **Allow**. Switchboard needs this to pass the sign-in to one specific Claude window. [How it works](how-it-works.md#signing-in-to-claude-desktop) explains why.
 

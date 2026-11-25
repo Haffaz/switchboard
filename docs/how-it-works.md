@@ -42,18 +42,22 @@ Signing in happens in your browser. When you finish, the browser hands the resul
 
 With one Claude running, that works. With several, macOS gives the link to whichever copy it prefers, usually the first one started. That copy did not ask for a sign-in, so it ignores the link, and the window that did ask waits forever.
 
-Switchboard fixes this for the length of one sign-in:
+Switchboard fixes this for the length of one sign-in. It becomes the app that opens `claude://` links, and that changes what Claude does:
 
 ```
-1. You choose Sign In for "work".
+1. You choose Sign In for "work". Its Claude window opens.
 2. Switchboard becomes the app that opens claude:// links.
-3. You sign in in the browser and click "Open Claude".
-4. The link arrives at Switchboard, which passes it to the "work" Claude.
-5. Switchboard gives claude:// links back to the app that had them.
+3. You click to sign in. Claude sees it is no longer the claude:// app,
+   so it signs in through its own sign-in sheet, which needs no link.
+4. Claude saves the sign-in. Switchboard notices and gives claude://
+   links back to the app that had them.
 ```
+
+If Claude uses your browser anyway, the browser's "Open Claude" link arrives at Switchboard, which passes it to the "work" Claude.
 
 Details that matter:
 
+- **Every Claude that starts claims `claude://` links again.** So Switchboard takes the links only after the account's Claude has started, and for the rest of the sign-in it checks once a second and takes them back if another Claude claimed them.
 - **Only the sign-in link is redirected.** Any other `claude://` link that arrives meanwhile goes to the Default Claude, as it would without Switchboard.
 - **One sign-in at a time.** A second sign-in would make it impossible to know whose link arrived, so Switchboard asks you to finish the first.
 - **A sign-in link goes to the account that asked, or nowhere.** If that account's Claude was closed in the meantime, Switchboard drops the link and tells you to start again.
