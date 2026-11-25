@@ -27,8 +27,6 @@ Switchboard gives each account its own Claude Desktop window and its own Claude 
 
 ## Install
 
-> **No release yet.** Homebrew and the download start working with the first release. Until then, [build from source](#build-from-source).
-
 **Homebrew**
 
 ```bash

@@ -13,7 +13,7 @@ Your current Claude setup stays exactly as it is. Switchboard lists it as **Defa
 
 ## 1. Install
 
-Pick one. The first two start working with the first release; until then, build from source.
+Pick one.
 
 **Homebrew**
 
