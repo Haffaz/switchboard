@@ -24,6 +24,8 @@ Commands marked `[name]` work without a name. They then use the first of these t
 
 Account names use lowercase letters, digits, `-` and `_`, start with a letter or digit, and are at most 32 characters. `default` is your original setup and always exists.
 
+An account can also have a friendlier shown name, set with `cprof rename`. Commands always take the account name, not the shown name.
+
 ## Accounts
 
 ### `cprof list [--json]`
@@ -37,7 +39,7 @@ $ cprof list
   side-project     (not signed in)
 ```
 
-`--json` prints the same accounts for scripts, with these fields: `name`, `email`, `icon`, `desktopRunning`, `desktopSignedIn`, `cliDir`, `desktopDir`.
+`--json` prints the same accounts for scripts, with these fields: `name`, `label`, `email`, `icon`, `desktopRunning`, `desktopSignedIn`, `cliDir`, `desktopDir`.
 
 ### `cprof add <name>`
 
@@ -50,6 +52,22 @@ cprof add work
 ### `cprof rm <name> [--yes]`
 
 Signs the account out of Claude Code and deletes its folders. It asks first unless you pass `--yes`. Quit that account's Claude Desktop before removing it. `default` cannot be removed.
+
+### `cprof rename <name> [label]`
+
+Changes the name shown for an account in the menu and in `cprof list`. It works for `default` too. Leave the label out to go back to the original name.
+
+```bash
+cprof rename default Personal
+```
+
+Only the shown name changes. In commands you still use the original name (`default`, `work`), because folders and sign-ins are tied to it. `cprof list` shows both:
+
+```
+$ cprof list
+* default (Personal)       you@personal.example
+  work (Day job)           you@company.example
+```
 
 ### `cprof icon <name> [symbol]`
 

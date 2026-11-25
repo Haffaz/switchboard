@@ -13,10 +13,14 @@ public struct Profile: Codable, Equatable, Sendable {
     public let desktopDir: String
     /// Name of a monochrome system symbol chosen for this account, if any.
     public let icon: String?
+    /// The name shown to people, if they renamed the account. `name` itself
+    /// never changes, because folders and Claude Code's login are tied to it.
+    public let label: String?
 
     public init(name: String, email: String, desktopSignedIn: Bool, cliDir: String, desktopDir: String,
-                icon: String? = nil) {
+                icon: String? = nil, label: String? = nil) {
         self.icon = icon
+        self.label = label
         self.name = name
         self.email = email
         self.desktopSignedIn = desktopSignedIn
@@ -25,7 +29,12 @@ public struct Profile: Codable, Equatable, Sendable {
     }
 
     public var isDefault: Bool { name == Self.defaultName }
-    public var displayName: String { isDefault ? "Default" : name }
+    /// What to call this account on screen: its label if it has one,
+    /// otherwise "Default" or its name.
+    public var displayName: String {
+        if let label, !label.isEmpty { return label }
+        return isDefault ? "Default" : name
+    }
     /// True when clicking the account should start sign-in, not just open it.
     public var needsDesktopSignIn: Bool { !isDefault && !desktopSignedIn }
 
@@ -41,7 +50,7 @@ public struct Profile: Codable, Equatable, Sendable {
     public func applying(_ login: CodeLogin) -> Profile {
         let verified = login.signedIn ? (login.email.isEmpty ? (email.isEmpty ? "signed in" : email) : login.email) : ""
         return Profile(name: name, email: verified, desktopSignedIn: desktopSignedIn,
-                       cliDir: cliDir, desktopDir: desktopDir, icon: icon)
+                       cliDir: cliDir, desktopDir: desktopDir, icon: icon, label: label)
     }
 
     /// The symbol to draw for this account: its own, or a neutral person.
@@ -81,6 +90,19 @@ public enum ProfileName {
         result = String(result.prefix(maxLength))
         while result.hasSuffix("-") { result.removeLast() }
         return result.isEmpty ? nil : result
+    }
+}
+
+/// The display name people can give an account.
+public enum AccountLabel {
+    public static let maxLength = 40
+
+    /// Tidy what someone typed: trim it, turn line breaks and tabs into
+    /// spaces, and cap the length. Nil if nothing is left.
+    public static func clean(_ raw: String) -> String? {
+        let flattened = raw.unicodeScalars.map { CharacterSet.controlCharacters.contains($0) ? " " : String($0) }.joined()
+        let trimmed = flattened.split(separator: " ", omittingEmptySubsequences: true).joined(separator: " ")
+        return trimmed.isEmpty ? nil : String(trimmed.prefix(maxLength))
     }
 }
 

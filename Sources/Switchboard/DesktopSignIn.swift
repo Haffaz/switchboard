@@ -8,11 +8,13 @@ enum DesktopSignIn {
 
     static func run(_ profile: Profile) async {
         if let busy = LinkRelay.shared.signingIn, busy != profile.name {
-            Dialogs.info("One sign-in at a time", "“\(busy)” is still signing in. Finish that first, then try “\(profile.name)”.")
+            let busyName = ProfileStore.shared.profile(named: busy)?.displayName ?? busy
+            Dialogs.info("One sign-in at a time",
+                         "“\(busyName)” is still signing in. Finish that first, then try “\(profile.displayName)”.")
             return
         }
         // Shown first: a dialog left open later would hold back the link.
-        guard Dialogs.signInIntro(profile.name) else { return }
+        guard Dialogs.signInIntro(profile.displayName) else { return }
 
         Log.write("sign-in \(profile.name): start")
         let app: NSRunningApplication
@@ -49,10 +51,11 @@ enum DesktopSignIn {
         if wasSignedIn { try? await Task.sleep(for: .seconds(5)) }  // let repeat deliveries land
         await LinkRelay.shared.stop()
         Log.write("sign-in \(name): \(confirmed ? "done" : "sent, not confirmed")")
+        let shown = ProfileStore.shared.profile(named: name)?.displayName ?? name
         if confirmed {
-            Dialogs.info("“\(name)” is signed in", "Claude Desktop for “\(name)” is ready.")
+            Dialogs.info("“\(shown)” is signed in", "Claude Desktop for “\(shown)” is ready.")
         } else {
-            Dialogs.info("Check the Claude window for “\(name)”",
+            Dialogs.info("Check the Claude window for “\(shown)”",
                          "Switchboard passed the sign-in on, but Claude has not confirmed it yet. "
                          + "If its window still shows the sign-in page, try again.")
         }

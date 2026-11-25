@@ -15,6 +15,7 @@ struct CLI {
           list [--json]          List accounts and who is signed in (the default command)
           add <name>             Create an account (shares rules/agents/skills with ~/.claude)
           rm <name> [--yes]      Sign out and delete an account and its data
+          rename <name> [label]  Change the name shown for an account; no label resets it
           icon <name> [symbol]   Set an account's menu icon (e.g. briefcase); no symbol clears it
 
           cli [name] [-- args]   Run `claude` as an account
@@ -42,6 +43,7 @@ struct CLI {
         case "list", "ls": try list(json: args.first == "--json")
         case "add": try add(try name(args, usage: "cprof add <name>"))
         case "rm", "remove": try remove(try name(args, usage: "cprof rm <name>"), confirmed: args.contains("--yes"))
+        case "rename": try rename(try name(args, usage: "cprof rename <name> [label]"), Array(args.dropFirst()))
         case "icon": try icon(try name(args, usage: "cprof icon <name> [symbol]"), args.count > 1 ? args[1] : nil)
         case "cli", "run": try runClaude(args)
         case "desktop": try await ClaudeDesktop.open(store.profile(try resolve(args.first)))
@@ -82,7 +84,7 @@ struct CLI {
 
     private struct ListEntry: Encodable {
         let name, email: String
-        let icon: String?
+        let icon, label: String?
         let desktopRunning, desktopSignedIn: Bool
         let cliDir, desktopDir: String
     }
@@ -91,7 +93,7 @@ struct CLI {
         let profiles = store.verifiedProfiles()
         if json {
             let entries = profiles.map {
-                ListEntry(name: $0.name, email: $0.email, icon: $0.icon,
+                ListEntry(name: $0.name, email: $0.email, icon: $0.icon, label: $0.label,
                           desktopRunning: ClaudeDesktop.running($0) != nil, desktopSignedIn: $0.desktopSignedIn,
                           cliDir: $0.cliDir, desktopDir: $0.desktopDir)
             }
@@ -103,7 +105,8 @@ struct CLI {
         let current = store.resolve(explicit: nil, environment: environment, cwd: cwd).name
         for profile in profiles {
             let mark = profile.name == current ? "*" : " "
-            let padded = profile.name.padding(toLength: 16, withPad: " ", startingAt: 0)
+            let shown = profile.label.map { "\(profile.name) (\($0))" } ?? profile.name
+            let padded = shown.count >= 24 ? shown + " " : shown.padding(toLength: 24, withPad: " ", startingAt: 0)
             print("\(mark) \(padded) \(profile.email.isEmpty ? "(not signed in)" : profile.email)")
         }
     }
@@ -136,6 +139,13 @@ struct CLI {
 
     static let signOutFailedNote = "Its Claude Code sign-in could not be removed from Keychain. "
         + "Open Keychain Access and delete the newest \"Claude Code-credentials\" entry if you want it gone."
+
+    private func rename(_ name: String, _ words: [String]) throws {
+        let label = words.joined(separator: " ")
+        try store.setLabel(name, to: label)
+        let shown = store.profile(name).displayName
+        print(AccountLabel.clean(label) == nil ? "\(name) is shown as \(shown) again." : "\(name) is now shown as \(shown).")
+    }
 
     private func icon(_ name: String, _ symbol: String?) throws {
         try store.setIcon(name, to: symbol)

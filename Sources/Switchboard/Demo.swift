@@ -65,6 +65,9 @@ enum Demo {
                 accountMenu.popUp(positioning: nil, at: point, in: nil)
             }
         }
+        failures += shoot(output.appendingPathComponent("rename.png"), dismiss: { NSApp.abortModal() }) {
+            _ = Dialogs.askRename(current: "Default", original: "Default")
+        }
         failures += shoot(output.appendingPathComponent("add-account.png"), dismiss: { NSApp.abortModal() }) {
             _ = Dialogs.askNewAccountName()
         }

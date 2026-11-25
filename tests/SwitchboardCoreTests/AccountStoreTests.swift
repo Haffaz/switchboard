@@ -145,6 +145,65 @@ struct AccountDetailTests {
     }
 }
 
+@Suite("Renaming accounts")
+struct RenameTests {
+    @Test("Any account can be renamed, including the default one")
+    func rename() throws {
+        let box = try Sandbox()
+        try box.store.add("work")
+        #expect(box.store.profile("default").displayName == "Default")
+        #expect(box.store.profile("work").displayName == "work")
+
+        try box.store.setLabel("default", to: "Personal")
+        try box.store.setLabel("work", to: "  ACME   Corp\n")
+        #expect(box.store.profile("default").displayName == "Personal")
+        #expect(box.store.profile("work").displayName == "ACME Corp")
+    }
+
+    @Test("Renaming changes only the label: the name, folders and listing stay")
+    func renameKeepsIdentity() throws {
+        let box = try Sandbox()
+        try box.store.add("work")
+        let before = box.store.profile("work")
+        try box.store.setLabel("work", to: "Day job")
+        let after = box.store.profile("work")
+        #expect(after.name == "work" && after.cliDir == before.cliDir && after.desktopDir == before.desktopDir)
+        try box.store.setLabel("default", to: "Personal")
+        #expect(box.store.names() == ["default", "work"])  // label files are not accounts
+        #expect(box.store.profile("default").isDefault && !box.store.profile("default").needsDesktopSignIn)
+    }
+
+    @Test("A blank label goes back to the original name", arguments: [nil, "", "   ", "\n\t"] as [String?])
+    func clearing(blank: String?) throws {
+        let box = try Sandbox()
+        try box.store.setLabel("default", to: "Personal")
+        try box.store.setLabel("default", to: blank)
+        #expect(box.store.profile("default").displayName == "Default")
+        #expect(box.store.profile("default").label == nil)
+    }
+
+    @Test("Labels are tidied and capped")
+    func cleaning() {
+        #expect(AccountLabel.clean("  Work  ") == "Work")
+        #expect(AccountLabel.clean("a\nb\tc") == "a b c")
+        #expect(AccountLabel.clean(String(repeating: "x", count: 90))?.count == AccountLabel.maxLength)
+        #expect(AccountLabel.clean("日本語 🙂") == "日本語 🙂")
+        #expect(AccountLabel.clean(" \n ") == nil)
+    }
+
+    @Test("Renaming an account that does not exist is refused")
+    func unknownAccount() throws {
+        let box = try Sandbox()
+        #expect(throws: SwitchboardError.self) { try box.store.setLabel("ghost", to: "X") }
+    }
+
+    @Test("A corrected login keeps the label")
+    func labelSurvivesLoginCheck() {
+        let profile = Profile(name: "work", email: "", desktopSignedIn: true, cliDir: "", desktopDir: "/d", label: "Day job")
+        #expect(profile.applying(CodeLogin(signedIn: true, email: "me@x.example")).displayName == "Day job")
+    }
+}
+
 @Suite("Claude Code login, as Claude Code reports it")
 struct CodeLoginTests {
     @Test("Reads signed-in and signed-out answers")

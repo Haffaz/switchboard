@@ -36,6 +36,11 @@ public struct AccountStore: Sendable {
                                     : accountDir(name).appendingPathComponent("icon")
     }
 
+    private func labelFile(_ name: String) -> URL {
+        name == Profile.defaultName ? paths.profilesHome.appendingPathComponent(".default-label")
+                                    : accountDir(name).appendingPathComponent("label")
+    }
+
     // MARK: - Reading
 
     public func exists(_ name: String) -> Bool {
@@ -63,7 +68,8 @@ public struct AccountStore: Sendable {
 
     public func profile(_ name: String) -> Profile {
         Profile(name: name, email: codeEmail(name), desktopSignedIn: desktopSignedIn(name),
-                cliDir: cliDir(name).path, desktopDir: desktopDir(name)?.path ?? "", icon: icon(name))
+                cliDir: cliDir(name).path, desktopDir: desktopDir(name)?.path ?? "", icon: icon(name),
+                label: label(name))
     }
 
     /// Ask Claude Code about every account at once (about 0.2 s in total).
@@ -107,6 +113,10 @@ public struct AccountStore: Sendable {
         let dir = desktopDir(name) ?? paths.defaultDesktopDir
         let id = Self.json(dir.appendingPathComponent("config.json"))?["lastKnownAccountUuid"] as? String
         return !(id ?? "").isEmpty
+    }
+
+    func label(_ name: String) -> String? {
+        (try? String(contentsOf: labelFile(name), encoding: .utf8)).flatMap(AccountLabel.clean)
     }
 
     func icon(_ name: String) -> String? {
@@ -165,6 +175,16 @@ public struct AccountStore: Sendable {
         guard name != Profile.defaultName else { throw SwitchboardError("refusing to delete the default account") }
         try fm.removeItem(at: accountDir(name))
         try? fm.removeItem(at: paths.launchDir.appendingPathComponent("\(name).command"))
+    }
+
+    /// Rename an account on screen; nil or blank goes back to its own name.
+    /// Only the label changes: folders and sign-ins stay where they are.
+    public func setLabel(_ name: String, to label: String?) throws {
+        try require(name)
+        let file = labelFile(name)
+        guard let cleaned = label.flatMap(AccountLabel.clean) else { try? fm.removeItem(at: file); return }
+        try fm.createDirectory(at: paths.profilesHome, withIntermediateDirectories: true)
+        try (cleaned + "\n").write(to: file, atomically: true, encoding: .utf8)
     }
 
     /// Set an account's icon; nil or empty clears it.

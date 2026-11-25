@@ -22,7 +22,7 @@ It comes with `cprof`, a command-line tool that does the same things from a term
 - **Your setup is shared.** Your `CLAUDE.md`, rules, agents, skills, hooks and settings apply to every account, from one place.
 - **Sign-in that goes to the right window.** With several Claude copies open, a browser sign-in normally lands in the wrong one. Switchboard routes it to the account you are signing in.
 - **Folders can remember their account.** Pin a project folder to an account, and `claude` uses it there.
-- **Your existing setup is untouched.** It becomes the "Default" account. Switchboard never moves or changes it.
+- **Your existing setup is untouched.** It becomes the "Default" account, which you can rename. Switchboard never moves or changes it.
 
 ## Install
 

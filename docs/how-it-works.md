@@ -9,6 +9,8 @@ Switchboard does not change Claude. It starts Claude's own apps in a way that gi
 | **Claude Code** | The `CLAUDE_CONFIG_DIR` setting tells Claude Code which folder to use. Claude Code keeps a separate Keychain login for each folder. | `~/.claude-profiles/<name>/cli` |
 | **Claude Desktop** | A separate copy of the app is started with its own data folder (the `--user-data-dir` option). | `~/.claude-profiles/<name>/desktop` |
 
+Each account has a fixed name, which its folders are named after, and an optional shown name that you can change at any time with **Rename…**. Renaming never moves anything.
+
 The **Default** account is your existing setup: `~/.claude` for Claude Code, and Claude Desktop's normal data folder. Switchboard starts it the ordinary way and never moves or changes it.
 
 Both mechanisms belong to Claude's apps, not to Switchboard. If a future Claude update changes either one, Switchboard will need an update too.
@@ -95,7 +97,7 @@ A cloned repository can contain one of these files. It can only name an account 
 |---|---|
 | `~/.claude-profiles/<name>/` | One folder per account, readable only by you |
 | `~/.claude-profiles/.launch/` | Small scripts that Terminal windows run |
-| `~/.claude-profiles/.default-icon` | The Default account's icon, if you set one |
+| `~/.claude-profiles/.default-icon`, `.default-label` | The Default account's icon and shown name, if you set them |
 | `~/Applications/Claude (<name>).app` | Dock launchers, if you make them |
 | `~/.local/bin/cprof` | A link to the command-line tool, if you install it |
 | `~/Library/Logs/Switchboard.log` | The log |

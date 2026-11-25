@@ -42,6 +42,24 @@ enum Dialogs {
         return nil
     }
 
+    /// Ask for a new display name. Nil means cancelled; an empty string
+    /// means "go back to the original name".
+    static func askRename(current: String, original: String) -> String? {
+        let alert = makeAlert()
+        alert.messageText = "Rename “\(current)”"
+        alert.informativeText = "This changes the name shown in the menu. Sign-ins, history and files stay as they are."
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 24))
+        field.stringValue = current
+        field.placeholderString = original
+        alert.accessoryView = field
+        alert.addButton(withTitle: "Rename")
+        alert.addButton(withTitle: "Cancel")
+        alert.window.initialFirstResponder = field
+        NSApp.activate(ignoringOtherApps: true)
+        guard alert.runModal() == .alertFirstButtonReturn else { return nil }
+        return AccountLabel.clean(field.stringValue) ?? ""
+    }
+
     static func afterCreate(_ name: String) -> NextStep {
         let alert = makeAlert()
         alert.messageText = "“\(name)” is ready. Sign in now?"

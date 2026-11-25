@@ -119,6 +119,7 @@ final class MenuController: NSObject, NSMenuDelegate {
         }
 
         sub.addItem(.separator())
+        sub.addItem(item("Rename…", #selector(rename(_:)), profile))
         let icon = NSMenuItem(title: "Icon", action: nil, keyEquivalent: "")
         icon.submenu = iconMenu(profile)
         sub.addItem(icon)
@@ -205,6 +206,15 @@ final class MenuController: NSObject, NSMenuDelegate {
         Task { await perform { try TerminalLauncher.open(profile.name, mode: mode, store: accounts) } }
     }
 
+    @objc private func rename(_ sender: NSMenuItem) {
+        guard let profile = profile(sender) else { return }
+        let original = profile.isDefault ? "Default" : profile.name
+        guard let label = Dialogs.askRename(current: profile.displayName, original: original) else { return }
+        let accounts = accounts
+        // Typing the original name back is the same as clearing the label.
+        Task { await perform { try accounts.setLabel(profile.name, to: label == original ? nil : label) } }
+    }
+
     @objc private func setIcon(_ sender: NSMenuItem) {
         guard let profile = profile(sender), let symbol = sender.identifier?.rawValue else { return }
         let accounts = accounts
@@ -264,10 +274,10 @@ final class MenuController: NSObject, NSMenuDelegate {
     }
 
     @objc private func remove(_ sender: NSMenuItem) {
-        guard let profile = profile(sender), Dialogs.confirmRemove(profile.name) else { return }
+        guard let profile = profile(sender), Dialogs.confirmRemove(profile.displayName) else { return }
         Task {
             guard await ClaudeDesktop.quit(profile) else {
-                Dialogs.error("Claude for “\(profile.name)” is still running. Quit it, then remove the account.")
+                Dialogs.error("Claude for “\(profile.displayName)” is still running. Quit it, then remove the account.")
                 return
             }
             let accounts = accounts
@@ -276,7 +286,7 @@ final class MenuController: NSObject, NSMenuDelegate {
                 !profile.codeSignedIn || ClaudeCode.signOut(configDir: accounts.cliDir(profile.name))
             }.value
             guard await perform({ try accounts.remove(profile.name) }) else { return }
-            Dialogs.info("Removed “\(profile.name)”", signedOut
+            Dialogs.info("Removed “\(profile.displayName)”", signedOut
                 ? "Its sign-in, history and settings are gone from this Mac."
                 : "Its history and settings are gone. Its Claude Code sign-in could not be removed from Keychain; "
                   + "open Keychain Access and delete the newest “Claude Code-credentials” entry if you want it gone.")

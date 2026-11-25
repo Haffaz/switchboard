@@ -10,7 +10,7 @@ You need:
 - [Claude Desktop](https://claude.ai/download), [Claude Code](https://claude.com/claude-code), or both.
 - Xcode 16 or later, to build Switchboard. There are no downloadable releases yet.
 
-Your current Claude setup stays exactly as it is. Switchboard calls it **Default** and never moves or changes it.
+Your current Claude setup stays exactly as it is. Switchboard lists it as **Default** and never moves or changes it. You can rename it, for example to "Personal".
 
 ## 1. Install
 
@@ -76,6 +76,14 @@ A Terminal window opens and runs Claude Code's sign-in for this account. Follow 
 Closing a Claude window does not quit that Claude. It keeps running in the background, like any Mac app. With several copies that look the same, that is easy to miss.
 
 To stop one, point at the account and choose **Quit Claude Desktop**. When two or more are running, **Quit All Claude Desktops** appears in the main menu.
+
+### Renaming an account
+
+Point at an account and choose **Rename…** to change the name shown in the menu. This works for every account, including Default.
+
+<p align="center"><img src="images/rename.png" width="348" alt="The Rename dialog, with a text field holding the current name"></p>
+
+Renaming changes only what you see. Sign-ins, chat history and files stay where they are. Clear the field to go back to the original name.
 
 ### Telling accounts apart
 
