@@ -4,10 +4,19 @@ import SwitchboardCore
 /// All pop-up windows in one place, worded for people, not terminals.
 @MainActor
 enum Dialogs {
+    /// Demo mode sets this, because a bare program has no app icon.
+    static var iconOverride: NSImage?
+
+    private static func makeAlert() -> NSAlert {
+        let alert = NSAlert()
+        if let iconOverride { alert.icon = iconOverride }
+        return alert
+    }
+
     enum NextStep { case both, desktop, code, later }
 
     static func askNewAccountName() -> String? {
-        let alert = NSAlert()
+        let alert = makeAlert()
         alert.messageText = "Add a Claude account"
         alert.informativeText = "Give it a short name you’ll recognise, like “Work” or “Personal”. "
             + "You’ll sign in on the next step."
@@ -34,7 +43,7 @@ enum Dialogs {
     }
 
     static func afterCreate(_ name: String) -> NextStep {
-        let alert = NSAlert()
+        let alert = makeAlert()
         alert.messageText = "“\(name)” is ready. Sign in now?"
         alert.informativeText = "Claude Desktop and Claude Code each have their own sign-in. "
             + "Sign in to the same account in both, or only the one you use."
@@ -52,7 +61,7 @@ enum Dialogs {
     }
 
     static func confirmRemove(_ name: String) -> Bool {
-        let alert = NSAlert()
+        let alert = makeAlert()
         alert.alertStyle = .warning
         alert.messageText = "Remove “\(name)”?"
         alert.informativeText = "This signs “\(name)” out of Claude Code and deletes its chat history "
@@ -65,8 +74,19 @@ enum Dialogs {
         return alert.runModal() == .alertFirstButtonReturn
     }
 
+    /// Explains the Claude Desktop sign-in before it starts.
+    static func signInIntro(_ name: String) -> Bool {
+        confirm("Sign in to Claude Desktop as “\(name)”", """
+            After you click Continue:
+            1. Sign in in the Claude window that opens (Google or email).
+            2. When your browser asks, click “Open Claude”.
+
+            Switchboard sends you back to the right window. Your other Claude windows stay open.
+            """, button: "Continue")
+    }
+
     static func confirm(_ title: String, _ text: String, button: String) -> Bool {
-        let alert = NSAlert()
+        let alert = makeAlert()
         alert.messageText = title
         alert.informativeText = text
         alert.addButton(withTitle: button)
@@ -78,7 +98,7 @@ enum Dialogs {
     enum DeliveryChoice { case retry, openSettings, cancel }
 
     static func deliveryFailed(_ profile: String) -> DeliveryChoice {
-        let alert = NSAlert()
+        let alert = makeAlert()
         alert.alertStyle = .warning
         alert.messageText = "Almost there: allow Switchboard to talk to Claude"
         alert.informativeText = "Switchboard caught the sign-in for “\(profile)” but macOS blocked passing it on. "
@@ -105,7 +125,7 @@ enum Dialogs {
     enum HelpChoice { case done, showLog }
 
     static func help() -> HelpChoice {
-        let alert = NSAlert()
+        let alert = makeAlert()
         alert.messageText = "Switchboard"
         alert.informativeText = """
             Each account has its own Claude Desktop and its own Claude Code sign-in.
@@ -125,7 +145,7 @@ enum Dialogs {
     }
 
     private static func show(_ title: String, _ text: String, style: NSAlert.Style) {
-        let alert = NSAlert()
+        let alert = makeAlert()
         alert.alertStyle = style
         alert.messageText = title
         alert.informativeText = text

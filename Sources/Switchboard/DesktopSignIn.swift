@@ -12,13 +12,7 @@ enum DesktopSignIn {
             return
         }
         // Shown first: a dialog left open later would hold back the link.
-        guard Dialogs.confirm("Sign in to Claude Desktop as “\(profile.name)”", """
-            After you click Continue:
-            1. Sign in in the Claude window that opens (Google or email).
-            2. When your browser asks, click “Open Claude”.
-
-            Switchboard sends you back to the right window. Your other Claude windows stay open.
-            """, button: "Continue") else { return }
+        guard Dialogs.signInIntro(profile.name) else { return }
 
         Log.write("sign-in \(profile.name): start")
         let app: NSRunningApplication

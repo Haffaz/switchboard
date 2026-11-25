@@ -17,11 +17,26 @@ final class ProfileStore {
     private var logins: [String: CodeLogin] = [:]
     private var loginsCheckedAt = Date.distantPast
 
+    /// Set only in demo mode: sample accounts stand in for the real ones, and
+    /// these names count as running. Nothing is read from disk.
+    private(set) var demoRunning: Set<String>?
+
     func profile(named name: String) -> Profile? { profiles.first { $0.name == name } }
+
+    func loadDemo(_ sample: [Profile], running: Set<String>) {
+        profiles = sample
+        demoRunning = running
+    }
+
+    /// Which accounts have Claude Desktop running right now.
+    func runningNames() -> Set<String> {
+        demoRunning ?? Set(profiles.filter { ClaudeDesktop.running($0) != nil }.map(\.name))
+    }
 
     /// Reload from disk. Returns true if anything changed.
     @discardableResult
     func refresh(recheckLogins: Bool = false) async -> Bool {
+        guard demoRunning == nil else { return false }
         let accounts = AccountStore()
         let base = await Task.detached { accounts.profiles() }.value
         if recheckLogins || Date().timeIntervalSince(loginsCheckedAt) > Self.loginMaxAge {

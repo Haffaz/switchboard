@@ -31,6 +31,13 @@ final class MenuController: NSObject, NSMenuDelegate {
         statusItem.menu = menu
     }
 
+    /// For demo mode: the menu, freshly built, and one account's side menu.
+    func builtMenu() -> NSMenu { build(); return menu }
+    func builtAccountMenu(_ name: String) -> NSMenu? {
+        build()
+        return menu.items.first { ($0.representedObject as? String) == name }?.submenu
+    }
+
     func menuNeedsUpdate(_ menu: NSMenu) {
         build()
         Task { if await store.refresh() { build() } }
@@ -42,7 +49,7 @@ final class MenuController: NSObject, NSMenuDelegate {
         if profiles.isEmpty {
             menu.addItem(MenuItems.disabled("Loading…"))
         }
-        let running = Set(profiles.filter { ClaudeDesktop.running($0) != nil }.map(\.name))
+        let running = store.runningNames()
         for (index, profile) in profiles.enumerated() {
             menu.addItem(accountRow(profile, running: running.contains(profile.name),
                                     key: index < 9 ? "\(index + 1)" : ""))

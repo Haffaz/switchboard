@@ -29,6 +29,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 MainActor.assumeIsolated {
+    // `Switchboard --demo-screenshots <folder>` shows sample accounts,
+    // captures the menu and dialogs for the docs, and exits. It reads and
+    // changes no real account.
+    if let flag = CommandLine.arguments.firstIndex(of: "--demo-screenshots"),
+       CommandLine.arguments.count > flag + 1 {
+        Demo.run(output: URL(fileURLWithPath: CommandLine.arguments[flag + 1]))
+    }
     let app = NSApplication.shared
     let delegate = AppDelegate()
     app.delegate = delegate
