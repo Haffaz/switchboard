@@ -119,42 +119,61 @@ enum Demo {
         }
         view.cacheDisplay(in: view.bounds, to: shot)
 
-        let margin: CGFloat = 28, radius: CGFloat = window.level == .popUpMenu ? 10 : 14
-        let size = NSSize(width: view.bounds.width + 2 * margin, height: view.bounds.height + 2 * margin)
-        let scale: CGFloat = 2
-        guard let canvas = NSBitmapImageRep(
-            bitmapDataPlanes: nil, pixelsWide: Int(size.width * scale), pixelsHigh: Int(size.height * scale),
-            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
-            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { return false }
-        canvas.size = size
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: canvas)
-        let panel = NSRect(x: margin, y: margin, width: view.bounds.width, height: view.bounds.height)
-        let shape = NSBezierPath(roundedRect: panel, xRadius: radius, yRadius: radius)
-        // The backing panel is drawn in fixed colours that match the window's
-        // light or dark look, so the capture reads the same on any Mac.
+        guard let content = shot.cgImage else { report(file, "could not read the capture"); return false }
         let dark = window.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
-        let shadow = NSShadow()
-        shadow.shadowColor = NSColor.black.withAlphaComponent(dark ? 0.5 : 0.28)
-        shadow.shadowBlurRadius = 18
-        shadow.shadowOffset = NSSize(width: 0, height: -6)
-        NSGraphicsContext.saveGraphicsState()
-        shadow.set()
-        (dark ? NSColor(srgbRed: 0.16, green: 0.16, blue: 0.17, alpha: 1)
-              : NSColor(srgbRed: 0.97, green: 0.97, blue: 0.97, alpha: 1)).setFill()
-        shape.fill()
-        NSGraphicsContext.restoreGraphicsState()
-        (dark ? NSColor.white.withAlphaComponent(0.18) : NSColor.black.withAlphaComponent(0.12)).setStroke()
-        shape.lineWidth = 0.5
-        shape.stroke()
-        shape.addClip()
-        shot.draw(in: panel)
-        NSGraphicsContext.restoreGraphicsState()
-
-        guard let png = canvas.representation(using: .png, properties: [:]) else { return false }
+        guard let png = compose(content, size: view.bounds.size, radius: window.level == .popUpMenu ? 10 : 14, dark: dark)
+        else { report(file, "could not compose the image"); return false }
         do { try png.write(to: file) } catch { report(file, error.localizedDescription); return false }
         report(file, "captured \(Int(view.bounds.width))x\(Int(view.bounds.height)) from \(window.className)")
         return true
+    }
+
+    /// Put a capture on a solid rounded panel with a soft shadow.
+    ///
+    /// Menus and alerts are see-through on screen (the system draws glass
+    /// behind them), so a capture alone is mostly transparent and turns dark
+    /// on a dark page. The panel is painted first, in plain sRGB, and the
+    /// capture goes on top.
+    private static func compose(_ content: CGImage, size: NSSize, radius: CGFloat, dark: Bool) -> Data? {
+        let margin: CGFloat = 28, scale: CGFloat = 2
+        let width = Int((size.width + 2 * margin) * scale), height = Int((size.height + 2 * margin) * scale)
+        guard let space = CGColorSpace(name: CGColorSpace.sRGB),
+              let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                                      space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return nil }
+        context.scaleBy(x: scale, y: scale)
+        let panel = CGRect(x: margin, y: margin, width: size.width, height: size.height)
+        let shape = CGPath(roundedRect: panel, cornerWidth: radius, cornerHeight: radius, transform: nil)
+        let fill = dark ? CGColor(srgbRed: 0.16, green: 0.16, blue: 0.17, alpha: 1)
+                        : CGColor(srgbRed: 0.97, green: 0.97, blue: 0.97, alpha: 1)
+
+        context.saveGState()
+        context.setShadow(offset: CGSize(width: 0, height: -6), blur: 18,
+                          color: CGColor(srgbRed: 0, green: 0, blue: 0, alpha: dark ? 0.5 : 0.28))
+        context.addPath(shape)
+        context.setFillColor(fill)
+        context.fillPath()
+        context.restoreGState()
+
+        context.saveGState()
+        context.addPath(shape)
+        context.clip()
+        context.draw(content, in: panel)
+        context.restoreGState()
+
+        context.addPath(shape)
+        context.setStrokeColor(CGColor(srgbRed: dark ? 1 : 0, green: dark ? 1 : 0, blue: dark ? 1 : 0, alpha: dark ? 0.18 : 0.12))
+        context.setLineWidth(0.5)
+        context.strokePath()
+
+        // Guard against see-through output: the middle of the panel must be
+        // solid, or the image turns dark on a dark page.
+        guard let pixels = context.data else { return nil }
+        let centre = (height / 2) * context.bytesPerRow + (width / 2) * 4
+        guard pixels.load(fromByteOffset: centre + 3, as: UInt8.self) == 255 else { return nil }
+
+        guard let image = context.makeImage() else { return nil }
+        return NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])
     }
 
     private static func report(_ file: URL, _ message: String) {
