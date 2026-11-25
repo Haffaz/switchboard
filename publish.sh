@@ -95,6 +95,10 @@ rm -rf "$TAP_DIR"
 gh repo clone "$TAP_REPO" "$TAP_DIR" -- -q
 mkdir -p "$TAP_DIR/Casks"
 cp "$CASK" "$TAP_DIR/Casks/switchboard.rb"
+# Sign the tap's history as this project does, not with the machine-wide
+# git identity, which may hold a private email address.
+git -C "$TAP_DIR" config user.name "$(git -C "$ROOT" config user.name)"
+git -C "$TAP_DIR" config user.email "$(git -C "$ROOT" config user.email)"
 git -C "$TAP_DIR" add Casks/switchboard.rb
 git -C "$TAP_DIR" commit -q -m "switchboard $VERSION"
 git -C "$TAP_DIR" push -q origin HEAD
