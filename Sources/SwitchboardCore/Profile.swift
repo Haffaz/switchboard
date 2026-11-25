@@ -1,7 +1,7 @@
 import Foundation
 
-/// One account, as reported by `cprof list --json`.
-public struct Profile: Decodable, Equatable, Sendable {
+/// One account and what is known about it.
+public struct Profile: Codable, Equatable, Sendable {
     public let name: String
     /// Email Claude Code is signed in with; empty if it is not signed in.
     public let email: String
@@ -49,6 +49,13 @@ public struct Profile: Decodable, Equatable, Sendable {
 
 public enum ProfileName {
     public static let maxLength = 32
+
+    /// Lowercase letters, digits, '-' and '_'; starts with a letter or digit.
+    public static func isValid(_ name: String) -> Bool {
+        guard let first = name.first, name.count <= maxLength, first.isASCII, first.isLowercase || first.isNumber
+        else { return false }
+        return name.allSatisfy { $0.isASCII && ($0.isLowercase || $0.isNumber || $0 == "-" || $0 == "_") }
+    }
 
     /// Turn "Work Account" into "work-account". Nil if nothing usable is left.
     public static func slug(_ raw: String) -> String? {

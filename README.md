@@ -59,8 +59,11 @@ A shared item is a link. If you replace one with a real file inside an account's
 
 Two pieces do the work:
 
-- **`cprof`** (bash, in `bin/` and `lib/`) owns account folders, shared links and terminal launching. It works without the app.
-- **The app** (Swift, in `Sources/`) owns everything about running Claude copies: telling them apart, opening, quitting, and sign-in.
+- **The core** (`Sources/SwitchboardCore`) holds every rule once: account folders, shared links, telling Claude copies apart, and where a sign-in link goes. It has no user interface and is unit tested.
+- **The app** (`Sources/Switchboard`) is the menu and the sign-in flow on top of the core.
+- **`cprof`** (`Sources/cprof`) is a small command-line program on top of the same core.
+
+It is all Swift, with no third-party libraries.
 
 ### Sign-in and `claude://` links
 
@@ -77,7 +80,7 @@ It gives the links back after the sign-in, after 10 minutes, when it quits, or t
 Use **Switchboard ▸ Install Command Line Tool**, or link it yourself:
 
 ```bash
-ln -s "/Applications/Switchboard.app/Contents/Resources/cprof/bin/cprof" ~/.local/bin/cprof
+ln -s "/Applications/Switchboard.app/Contents/MacOS/cprof" ~/.local/bin/cprof
 ```
 
 ```bash
@@ -109,25 +112,23 @@ Which account a command uses: a name you type, then `$CPROF_PROFILE`, then the n
 
 - Terminal windows open in Terminal.app. Set `CPROF_TERMINAL_APP` to another app that opens `.command` files.
 - Keep the app in `/Applications`. Dock icons and the command line link point into it.
-- `cprof desktop` from a terminal cannot tell Claude copies apart as precisely as the app. Use the menu when several accounts are open.
 
 ## Development
 
 ```bash
-swift build          # compile
-swift test           # unit tests (Swift Testing)
-./tests/run.sh       # CLI tests (bash, no apps launched)
+swift build          # compile the app and cprof
+swift test           # unit tests (Swift Testing), run against temporary folders
+swift run cprof list # try the command-line tool without installing
 ./build.sh           # build/Switchboard.app, ad-hoc signed
 ```
 
 Layout:
 
 ```
-bin/cprof, lib/core.sh        the command line tool
-Sources/SwitchboardCore/      logic with no UI: accounts, process matching, link routing
+Sources/SwitchboardCore/      shared logic: accounts, launchers, process matching, link routing
 Sources/Switchboard/          the menu bar app
+Sources/cprof/                the command-line tool
 tests/SwitchboardCoreTests/   unit tests for the core
-tests/run.sh                  CLI tests
 tools/make-icon.swift         draws the app icon
 ```
 

@@ -25,8 +25,7 @@ preflight() {
     die "signing certificate not found in Keychain: $SIGN_IDENTITY"
   xcrun notarytool history --keychain-profile "$NOTARY_PROFILE" >/dev/null 2>&1 ||
     die "notary profile '$NOTARY_PROFILE' missing. Run the store-credentials command at the top of this file."
-  "$ROOT/tests/run.sh" >/dev/null || die "CLI tests failed"
-  swift test --package-path "$ROOT" >/dev/null 2>&1 || die "Swift tests failed"
+  swift test --package-path "$ROOT" >/dev/null 2>&1 || die "tests failed"
 }
 
 notarize() { # notarize <file>

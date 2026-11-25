@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build Switchboard.app (menu bar app with the cprof CLI inside).
+# Build Switchboard.app (the menu bar app, with the cprof command inside).
 #   ./build.sh             dev build, ad-hoc signed       -> build/Switchboard.app
 #   ./build.sh --sign      signed with your Developer ID (needs release.local.env)
 #   ./build.sh --install   also copy to /Applications and open it (combine with --sign)
@@ -66,13 +66,17 @@ write_plist() {
 PLIST
 }
 
+# The bundled cprof is signed first, then the app around it.
 sign() {
+  local cprof="$APP/Contents/MacOS/cprof"
   if $SIGNED; then
     step "Signing with $SIGN_IDENTITY"
+    codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$cprof"
     codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" \
       --sign "$SIGN_IDENTITY" "$APP"
-    codesign --verify --strict --verbose=2 "$APP"
+    codesign --verify --strict --deep --verbose=2 "$APP"
   else
+    codesign --force --options runtime --sign - "$cprof" >/dev/null
     codesign --force --options runtime --entitlements "$ENTITLEMENTS" --sign - "$APP" >/dev/null
   fi
 }
@@ -82,12 +86,11 @@ make_icon
 
 step "Compiling $APP_NAME $VERSION (Apple silicon + Intel)"
 swift build --package-path "$ROOT" -c release --arch arm64 --arch x86_64
-BIN="$(swift build --package-path "$ROOT" -c release --arch arm64 --arch x86_64 --show-bin-path)/$APP_NAME"
+BIN="$(swift build --package-path "$ROOT" -c release --arch arm64 --arch x86_64 --show-bin-path)"
 
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/cprof"
-cp "$BIN" "$APP/Contents/MacOS/$APP_NAME"
-cp -R "$ROOT/bin" "$ROOT/lib" "$APP/Contents/Resources/cprof/"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+cp "$BIN/$APP_NAME" "$BIN/cprof" "$APP/Contents/MacOS/"
 cp "$BUILD/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 write_plist
 sign

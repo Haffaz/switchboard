@@ -1,19 +1,18 @@
 import AppKit
-import SwitchboardCore
 
 /// Everything about running Claude Desktop copies: finding the app, telling
 /// the copies apart, opening, and quitting. All copies share one bundle ID,
 /// so each is identified by the data folder in its launch arguments.
 @MainActor
-enum ClaudeDesktop {
-    nonisolated static let bundleID = "com.anthropic.claudefordesktop"
+public enum ClaudeDesktop {
+    public nonisolated static let bundleID = "com.anthropic.claudefordesktop"
 
     /// Where Claude Desktop is installed, wherever that is.
-    nonisolated static var appURL: URL? {
+    public nonisolated static var appURL: URL? {
         NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID)
     }
 
-    static func running(_ profile: Profile) -> NSRunningApplication? {
+    public static func running(_ profile: Profile) -> NSRunningApplication? {
         NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first { app in
             guard !app.isTerminated, let args = ProcessArguments.of(pid: app.processIdentifier) else { return false }
             return ProcessArguments.belongs(args, to: profile)
@@ -23,13 +22,13 @@ enum ClaudeDesktop {
     /// Open this account's Claude, or bring its existing window forward.
     /// Returns the copy that belongs to the account.
     @discardableResult
-    static func open(_ profile: Profile) async throws -> NSRunningApplication {
+    public static func open(_ profile: Profile) async throws -> NSRunningApplication {
         if let existing = running(profile) {
             await bringForward(existing)
             return existing
         }
         guard let appURL else {
-            throw CprofError(message: "Claude Desktop is not installed. Get it from claude.ai/download.")
+            throw SwitchboardError("Claude Desktop is not installed. Get it from claude.ai/download.")
         }
         let config = NSWorkspace.OpenConfiguration()
         config.createsNewApplicationInstance = true  // never reuse another account's copy
@@ -67,7 +66,7 @@ enum ClaudeDesktop {
 
     /// Ask one account's Claude to quit. Returns false if it is still
     /// running after the grace period (Claude can refuse while busy).
-    static func quit(_ profile: Profile, waitSeconds: Double = 8) async -> Bool {
+    public static func quit(_ profile: Profile, waitSeconds: Double = 8) async -> Bool {
         guard let app = running(profile) else { return true }
         app.terminate()
         let deadline = Date().addingTimeInterval(waitSeconds)
@@ -78,7 +77,7 @@ enum ClaudeDesktop {
         return app.isTerminated
     }
 
-    static func forceQuit(_ profile: Profile) {
+    public static func forceQuit(_ profile: Profile) {
         running(profile)?.forceTerminate()
     }
 }

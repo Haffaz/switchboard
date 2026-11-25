@@ -39,9 +39,7 @@ final class MenuController: NSObject, NSMenuDelegate {
     private func build() {
         menu.removeAllItems()
         let profiles = store.profiles
-        if let error = store.loadError {
-            menu.addItem(MenuItems.disabled("Could not load accounts: \(error)"))
-        } else if profiles.isEmpty {
+        if profiles.isEmpty {
             menu.addItem(MenuItems.disabled("Loading…"))
         }
         let running = Set(profiles.filter { ClaudeDesktop.running($0) != nil }.map(\.name))
@@ -65,8 +63,18 @@ final class MenuController: NSObject, NSMenuDelegate {
         menu.addItem(item("Quit Switchboard", #selector(quit), key: "q"))
     }
 
+    /// The cprof program shipped inside this app.
+    private static var bundledCprof: URL {
+        (Bundle.main.executableURL ?? Bundle.main.bundleURL).deletingLastPathComponent().appendingPathComponent("cprof")
+    }
+
+    private static var cprofLink: URL {
+        URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".local/bin/cprof")
+    }
+
+    /// True when ~/.local/bin/cprof points at this app's copy.
     private static var commandLineToolInstalled: Bool {
-        FileManager.default.fileExists(atPath: NSHomeDirectory() + "/.local/bin/cprof")
+        cprofLink.resolvingSymlinksInPath().path == bundledCprof.resolvingSymlinksInPath().path
     }
 
     // MARK: - Accounts
@@ -156,16 +164,19 @@ final class MenuController: NSObject, NSMenuDelegate {
         (sender.representedObject as? String).flatMap(store.profile(named:))
     }
 
-    /// Run a script command for an account; show any error in plain words.
+    private let accounts = AccountStore()
+
+    /// Do some work on the accounts; show any error in plain words, then
+    /// reload the menu's copy. Returns false if it failed.
     @discardableResult
-    private func perform(_ args: [String]) async -> String? {
+    private func perform(_ work: @Sendable @escaping () throws -> Void) async -> Bool {
         do {
-            let output = try await Cprof.run(args)
+            try await Task.detached(operation: work).value
             await store.refresh()
-            return output
+            return true
         } catch {
-            Dialogs.error(error.localizedDescription)
-            return nil
+            Dialogs.error(error.localizedDescription.prefix(1).uppercased() + error.localizedDescription.dropFirst())
+            return false
         }
     }
 
@@ -179,12 +190,18 @@ final class MenuController: NSObject, NSMenuDelegate {
 
     @objc private func openCode(_ sender: NSMenuItem) {
         guard let profile = profile(sender) else { return }
-        Task { await perform([profile.codeSignedIn ? "code" : "login", profile.name]) }
+        openTerminal(profile, profile.codeSignedIn ? .claudeCode : .signIn)
+    }
+
+    private func openTerminal(_ profile: Profile, _ mode: TerminalLauncher.Mode) {
+        let accounts = accounts
+        Task { await perform { try TerminalLauncher.open(profile.name, mode: mode, store: accounts) } }
     }
 
     @objc private func setIcon(_ sender: NSMenuItem) {
         guard let profile = profile(sender), let symbol = sender.identifier?.rawValue else { return }
-        Task { await perform(symbol.isEmpty ? ["icon", profile.name] : ["icon", profile.name, symbol]) }
+        let accounts = accounts
+        Task { await perform { try accounts.setIcon(profile.name, to: symbol) } }
     }
 
     @objc private func signInDesktop(_ sender: NSMenuItem) {
@@ -214,20 +231,21 @@ final class MenuController: NSObject, NSMenuDelegate {
         }
     }
 
-    @objc private func openTerminal(_ sender: NSMenuItem) { script("terminal", sender) }
-    @objc private func signInCode(_ sender: NSMenuItem) { script("login", sender) }
+    @objc private func openTerminal(_ sender: NSMenuItem) {
+        if let profile = profile(sender) { openTerminal(profile, .shell) }
+    }
 
-    private func script(_ command: String, _ sender: NSMenuItem) {
-        guard let profile = profile(sender) else { return }
-        Task { await perform([command, profile.name]) }
+    @objc private func signInCode(_ sender: NSMenuItem) {
+        if let profile = profile(sender) { openTerminal(profile, .signIn) }
     }
 
     @objc private func makeDockApp(_ sender: NSMenuItem) {
         guard let profile = profile(sender) else { return }
+        let accounts = accounts, cprof = Self.bundledCprof, claude = ClaudeDesktop.appURL
         Task {
-            guard await perform(["app", profile.name]) != nil else { return }
-            let app = URL(fileURLWithPath: NSHomeDirectory())
-                .appendingPathComponent("Applications/Claude (\(profile.name)).app")
+            guard await perform({ try DockLauncher.make(profile.name, cprof: cprof, claudeApp: claude, store: accounts) })
+            else { return }
+            let app = accounts.paths.home.appendingPathComponent("Applications/Claude (\(profile.name)).app")
             NSWorkspace.shared.activateFileViewerSelecting([app])
             Dialogs.info("Dock icon ready", "Drag “Claude (\(profile.name))” from the Finder window to your Dock.")
         }
@@ -245,26 +263,42 @@ final class MenuController: NSObject, NSMenuDelegate {
                 Dialogs.error("Claude for “\(profile.name)” is still running. Quit it, then remove the account.")
                 return
             }
-            if let output = await perform(["rm", profile.name, "--yes"]) {
-                Dialogs.info("Removed “\(profile.name)”", output.trimmingCharacters(in: .whitespacesAndNewlines))
-            }
+            let accounts = accounts
+            // Signing out removes the Keychain entry; it can take a moment.
+            let signedOut = await Task.detached {
+                !profile.codeSignedIn || ClaudeCode.signOut(configDir: accounts.cliDir(profile.name))
+            }.value
+            guard await perform({ try accounts.remove(profile.name) }) else { return }
+            Dialogs.info("Removed “\(profile.name)”", signedOut
+                ? "Its sign-in, history and settings are gone from this Mac."
+                : "Its history and settings are gone. Its Claude Code sign-in could not be removed from Keychain; "
+                  + "open Keychain Access and delete the newest “Claude Code-credentials” entry if you want it gone.")
         }
     }
 
     @objc private func addAccount() {
         guard let name = Dialogs.askNewAccountName() else { return }
         Task {
-            guard await perform(["add", name]) != nil, let profile = store.profile(named: name) else { return }
+            let accounts = accounts
+            guard await perform({ try accounts.add(name) }), let profile = store.profile(named: name) else { return }
             let next = Dialogs.afterCreate(name)
-            if next == .code || next == .both { await perform(["login", name]) }
+            if next == .code || next == .both { openTerminal(profile, .signIn) }
             if next == .desktop || next == .both { await DesktopSignIn.run(profile) }
         }
     }
 
     @objc private func installCLI() {
+        let link = Self.cprofLink, target = Self.bundledCprof
         Task {
-            guard let output = await perform(["install-cli"]) else { return }
-            Dialogs.info("Command line tool installed", output + """
+            let done = await perform {
+                let fm = FileManager.default
+                try fm.createDirectory(at: link.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try? fm.removeItem(at: link)
+                try fm.createSymbolicLink(at: link, withDestinationURL: target)
+            }
+            guard done else { return }
+            Dialogs.info("Command line tool installed", """
+                You can now run `cprof` in a terminal (it is in ~/.local/bin).
 
                 Optional: to make `claude` follow each folder's account, add this line to ~/.zshrc:
                 eval "$(cprof init zsh)"

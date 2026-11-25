@@ -24,7 +24,7 @@ final class LinkRelay {
 
     func start(for profile: String) async throws {
         if let current = signingIn, current != profile {
-            throw CprofError(message: "“\(current)” is still signing in. Finish or cancel that first.")
+            throw SwitchboardError("“\(current)” is still signing in. Finish or cancel that first.")
         }
         let me = Bundle.main.bundleURL
         if let owner = Self.currentHandler(), !Self.same(owner, me) {
