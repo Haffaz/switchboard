@@ -52,14 +52,6 @@ cprof link <name>
 
 It restores missing links and lists items the account keeps as its own. To go back to the shared version of one, delete the account's copy in `~/.claude-profiles/<name>/cli` and run the command again.
 
-## Keyboard shortcuts
-
-### Control-Option and a number does nothing
-
-Check that **Shortcuts ⌃⌥1–9** has a tick in the menu. If it does, another app may be using the same keys; window managers often do. Change the shortcut in that app, or leave Switchboard's off.
-
-The log says how many of the nine shortcuts macOS accepted, on the line starting `shortcuts: on`.
-
 ## Opening and quitting
 
 ### I closed a Claude window but the green dot is still there

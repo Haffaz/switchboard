@@ -72,10 +72,6 @@ Your other Claude windows stay open and signed in. When the new window shows you
 - A **Sign In** badge means Claude Desktop is not signed in for that account yet.
 - While the menu is open, **⌘1, ⌘2…** open Claude Desktop for the first nine accounts, and **⇧⌘1, ⇧⌘2…** open Claude Code.
 
-### Switching accounts from the keyboard
-
-Turn on **Shortcuts ⌃⌥1–9** in the menu. From then on, **Control-Option-1** jumps to the first account's Claude from any app, **Control-Option-2** to the second, and so on, in the order the menu lists them. If that account's Claude is not running, it opens.
-
 ### Quitting an account
 
 Closing a Claude window does not quit that Claude. It keeps running in the background, like any Mac app. With several copies that look the same, that is easy to miss.

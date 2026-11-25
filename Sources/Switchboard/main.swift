@@ -6,10 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var controller: MenuController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let controller = MenuController()
-        self.controller = controller
-        HotKeys.shared.onPress = { [weak controller] index in controller?.activateAccount(at: index) }
-        HotKeys.shared.apply()
+        controller = MenuController()
         Task {
             // If an earlier run stopped mid sign-in, hand claude:// links back.
             await LinkRelay.returnLinks()

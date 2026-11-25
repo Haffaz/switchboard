@@ -41,7 +41,6 @@ Sources/Switchboard/          The menu bar app.
   DesktopSignIn.swift           the sign-in flow
   LinkRelay.swift               owning claude:// links during a sign-in
   Dialogs.swift                 every dialog, in one place
-  HotKeys.swift                 the system-wide keyboard shortcuts
   Demo.swift                    sample data and screenshots for the docs
 Sources/cprof/                The command-line tool.
 tests/SwitchboardCoreTests/   Unit tests for the core.

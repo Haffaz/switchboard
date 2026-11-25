@@ -14,14 +14,13 @@ A menu bar app for Claude Desktop and Claude Code.</p>
 
 Claude's apps hold one account at a time. If you have a work account and a personal one, switching means signing out and back in, and you can never have both open.
 
-Switchboard gives each account its own Claude Desktop window and its own Claude Code sign-in. They run side by side, and you move between them from the menu bar or the keyboard.
+Switchboard gives each account its own Claude Desktop window and its own Claude Code sign-in. They run side by side, and you move between them from the menu bar.
 
 ## Features
 
 - **Every account, one click away.** Open any account's Claude Desktop or Claude Code from the menu. A green dot shows which are running.
 - **Truly side by side.** Each account has its own sign-in, chats and projects. Nothing is signed out to make room.
 - **One shared setup.** Your `CLAUDE.md`, rules, agents, skills, hooks and settings apply to every account, from one place.
-- **Keyboard switching.** Control-Option-1 to 9 jump to an account's Claude from any app.
 - **Per-project accounts.** Pin a folder to an account, and `claude` uses it there.
 - **A command-line twin.** `cprof` does everything the menu does, for scripts and terminals.
 - **Leaves your setup alone.** Your current Claude becomes the "Default" account. Switchboard never moves or changes it.

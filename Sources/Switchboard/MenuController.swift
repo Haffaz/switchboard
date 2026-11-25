@@ -60,10 +60,6 @@ final class MenuController: NSObject, NSMenuDelegate {
         if running.count > 1 { menu.addItem(item("Quit All Claude Desktops", #selector(quitAllClaude))) }
 
         menu.addItem(.separator())
-        let shortcuts = item("Shortcuts ⌃⌥1–9", #selector(toggleShortcuts))
-        shortcuts.state = HotKeys.shared.isEnabled ? .on : .off
-        shortcuts.toolTip = "Press Control-Option and a number anywhere to jump to that account's Claude."
-        menu.addItem(shortcuts)
         let login = item("Open at Login", #selector(toggleLoginItem))
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menu.addItem(login)
@@ -341,20 +337,5 @@ final class MenuController: NSObject, NSMenuDelegate {
         }
     }
 
-    @objc private func toggleShortcuts() {
-        HotKeys.shared.setEnabled(!HotKeys.shared.isEnabled)
-    }
-
-    /// A global shortcut was pressed: go to the account in that menu position.
-    func activateAccount(at index: Int) {
-        Task {
-            if store.profiles.isEmpty { await store.refresh() }
-            guard store.profiles.indices.contains(index) else { return }
-            let profile = store.profiles[index]
-            Log.write("shortcut \(index + 1): \(profile.name)")
-            if profile.needsDesktopSignIn { await DesktopSignIn.run(profile); return }
-            do { try await ClaudeDesktop.open(profile) } catch { Dialogs.error(error.localizedDescription) }
-        }
-    }
     @objc private func quit() { NSApp.terminate(nil) }
 }
