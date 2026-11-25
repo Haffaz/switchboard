@@ -1,0 +1,243 @@
+#!/usr/bin/env bash
+# cprof — run Claude Code and Claude Desktop under separate accounts.
+set -euo pipefail
+
+SELF="$(readlink -f "${BASH_SOURCE[0]}")"
+# shellcheck source=../lib/core.sh
+source "$(dirname "$SELF")/../lib/core.sh"
+
+usage() {
+  cat <<'EOF'
+Usage: cprof <command> [args]
+
+  add <name>             Create a profile (shares rules/agents/skills with ~/.claude)
+  rm <name> [--yes]      Sign out and delete a profile and its data
+  list [--json]          List profiles and the account each CLI is signed in to
+  terminal [name]        Open a Terminal window set to a profile
+  code [name]            Open a Terminal window running Claude Code
+  login [name]           Open a Terminal window that signs the CLI in
+  install-cli            Put cprof on your PATH (~/.local/bin)
+  cli [name] [-- args]   Run `claude` under a profile
+  desktop [name]         Open Claude Desktop under a profile (new window/instance)
+  app <name>             Make "Claude (<name>).app" in ~/Applications for the Dock
+  env [name]             Print shell exports; use: eval "$(cprof env work)"
+  which                  Print the profile this folder resolves to
+  link <name>            Re-link shared items from ~/.claude into a profile
+  use <name>             Pin this folder to a profile (writes .claude-profile)
+  icon <name> [symbol]   Set an account's menu icon (e.g. briefcase); no symbol clears it
+  init zsh               Print a zsh snippet that makes `claude` profile-aware
+
+When [name] is omitted: $CPROF_PROFILE, then the nearest .claude-profile
+file, then "default".
+EOF
+}
+
+cmd_add() {
+  local name="${1:-}"; [[ -n "$name" ]] || die "usage: cprof add <name>"
+  validate_name "$name"
+  [[ "$name" != "default" ]] || die "'default' always exists"
+  profile_exists "$name" && die "profile '$name' already exists"
+  mkdir -p "$(cli_dir "$name")" "$(desktop_dir "$name")"
+  chmod 700 "$(profile_dir "$name")"
+  link_shared "$name"
+  printf 'Created %s. Sign in with:\n  cprof login %s      (Claude Code)\n  cprof desktop %s    (Claude Desktop)\n' \
+    "$name" "$name" "$name"
+}
+
+cmd_rm() {
+  local name="${1:-}" yes="${2:-}"; require_profile "$name"
+  [[ "$name" != "default" ]] || die "refusing to delete the default profile"
+  if [[ "$yes" != "--yes" ]]; then
+    local reply
+    read -r -p "Delete profile '$name' and all its data? [y/N] " reply
+    [[ "$reply" == [yY] ]] || { echo "Cancelled."; return 0; }
+  fi
+  desktop_running "$name" && die "quit Claude Desktop for '$name' first"
+  local signed_out=true
+  if [[ -n "$(cli_account "$name")" ]]; then
+    claude_bin >/dev/null &&
+      CLAUDE_CONFIG_DIR="$(cli_dir "$name")" "$(claude_bin)" auth logout >/dev/null 2>&1 || signed_out=false
+  fi
+  rm -rf "$(profile_dir "$name")" "$CPROF_HOME/.launch/$name.command"
+  echo "Deleted $name."
+  $signed_out || echo "Its Claude Code sign-in could not be removed from Keychain. Open Keychain Access and delete the newest \"Claude Code-credentials\" entry if you want it gone."
+}
+
+cmd_list() {
+  local name current email running signed
+  current="$(resolve_profile "")"
+  if [[ "${1:-}" == "--json" ]]; then
+    local first=1; printf '['
+    while IFS= read -r name; do
+      email="$(cli_account "$name")"
+      running=false; desktop_running "$name" && running=true
+      signed=false; desktop_signed_in "$name" && signed=true
+      [[ $first -eq 1 ]] || printf ','
+      first=0
+      printf '{"name":%s,"email":%s,"icon":%s,"desktopRunning":%s,"desktopSignedIn":%s,"cliDir":%s,"desktopDir":%s}' \
+        "$(json_str "$name")" "$(json_str "$email")" "$(json_str "$(profile_icon "$name")")" "$running" "$signed" \
+        "$(json_str "$(cli_dir "$name")")" "$(json_str "$(desktop_dir "$name")")"
+    done < <(list_profiles)
+    printf ']\n'; return
+  fi
+  while IFS= read -r name; do
+    local mark=" "; [[ "$name" == "$current" ]] && mark="*"
+    email="$(cli_account "$name")"
+    printf '%s %-16s %s\n' "$mark" "$name" "${email:-(not signed in)}"
+  done < <(list_profiles)
+}
+
+split_name_and_args() {
+  # Sets NAME and ARGS from "[name] [-- args...]".
+  NAME=""; ARGS=()
+  if [[ $# -gt 0 && "$1" != "--" && "$1" != -* ]]; then NAME="$1"; shift; fi
+  [[ "${1:-}" == "--" ]] && shift
+  ARGS=("$@")
+}
+
+cmd_cli() {
+  split_name_and_args "$@"
+  local name; name="$(resolve_profile "$NAME")"; require_profile "$name"
+  # A folder's .claude-profile picked the account: say so, since the file may
+  # have come with a cloned repository.
+  if [[ -z "$NAME" && -z "${CPROF_PROFILE:-}" && "$name" != "default" && -t 2 ]]; then
+    warn "using account '$name' (from a $CPROF_PROFILE_FILE file)"
+  fi
+  local bin; bin="$(claude_bin)" || die "Claude Code is not installed (see https://claude.com/claude-code)"
+  if [[ "$name" == "default" ]]; then
+    exec env -u CLAUDE_CONFIG_DIR "$bin" "${ARGS[@]+"${ARGS[@]}"}"
+  fi
+  CLAUDE_CONFIG_DIR="$(cli_dir "$name")" exec "$bin" "${ARGS[@]+"${ARGS[@]}"}"
+}
+
+cmd_desktop() {
+  local name; name="$(resolve_profile "${1:-}")"; require_profile "$name"
+  local app; app="$(find_desktop_app)" || die "Claude Desktop is not installed (see https://claude.ai/download)"
+  local data; data="$(desktop_dir "$name")"
+  # -n starts a separate copy. A copy that is already running for this
+  # account notices the newcomer, shows its window, and the newcomer exits.
+  if [[ -z "$data" ]]; then open -n -a "$app"
+  else open -n -a "$app" --args --user-data-dir="$data"; fi
+}
+
+cmd_app() {
+  local name="${1:-}"; require_profile "$name"
+  local app="$HOME/Applications/Claude ($name).app"
+  mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+  cp "$(find_desktop_app)/Contents/Resources/electron.icns" \
+     "$app/Contents/Resources/icon.icns" 2>/dev/null || true
+  cat > "$app/Contents/Info.plist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>CFBundleName</key><string>Claude ($name)</string>
+  <key>CFBundleIdentifier</key><string>local.cprof.$name</string>
+  <key>CFBundleExecutable</key><string>launch</string>
+  <key>CFBundleIconFile</key><string>icon</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>LSUIElement</key><true/>
+</dict></plist>
+EOF
+  printf '#!/bin/sh\nexec "%s" desktop "%s"\n' "$SELF" "$name" > "$app/Contents/MacOS/launch"
+  chmod +x "$app/Contents/MacOS/launch"
+  echo "Made $app — drag it to the Dock."
+}
+
+# Open a Terminal window for a profile. --claude starts Claude Code in it,
+# --login signs Claude Code in. The window runs your normal interactive
+# shell setup first, so `claude` is found the same way as when you type it.
+cmd_terminal() {
+  local name; name="$(resolve_profile "${1:-}")"; require_profile "$name"
+  local launch_dir="$CPROF_HOME/.launch" script run=""
+  mkdir -p "$launch_dir"; chmod 700 "$CPROF_HOME" "$launch_dir"
+  script="$launch_dir/$name.command"
+  case "${2:-}" in
+    --claude) run='cd ~ && run_claude' ;;
+    --login)  run='run_claude auth login' ;;
+  esac
+  {
+    printf '#!/bin/zsh -li\nclear\n'
+    cmd_env "$name"
+    printf 'fallback=%q\n' "$(claude_bin || true)"
+    cat <<'EOF'
+run_claude() {
+  if command -v claude >/dev/null 2>&1; then claude "$@"
+  elif [[ -n "$fallback" && -x "$fallback" ]]; then "$fallback" "$@"
+  else print "Claude Code is not installed. See https://claude.com/claude-code"; fi
+}
+EOF
+    printf 'print -P "%%BClaude account: %s%%b\\n"\n' "$name"
+    printf '%s\n' "$run"
+    printf 'exec "$SHELL" -l\n'
+  } > "$script"
+  chmod 700 "$script"
+  open -a "${CPROF_TERMINAL_APP:-Terminal}" "$script"
+}
+
+cmd_install_cli() {
+  local dest="$HOME/.local/bin"
+  mkdir -p "$dest"
+  ln -sfn "$SELF" "$dest/cprof"
+  echo "Installed $dest/cprof"
+  case ":$PATH:" in *":$dest:"*) ;; *) echo "Add $dest to your PATH." ;; esac
+}
+
+cmd_env() {
+  local name; name="$(resolve_profile "${1:-}")"; require_profile "$name"
+  printf 'export CPROF_PROFILE=%q\n' "$name"
+  if [[ "$name" == "default" ]]; then echo 'unset CLAUDE_CONFIG_DIR'
+  else printf 'export CLAUDE_CONFIG_DIR=%q\n' "$(cli_dir "$name")"; fi
+}
+
+# cprof icon <name> [symbol]   set, or clear with no symbol
+cmd_icon() {
+  local name="${1:-}" icon="${2:-}"; require_profile "$name"
+  local file; file="$(icon_file "$name")"
+  if [[ -z "$icon" ]]; then rm -f "$file"; echo "Cleared icon for $name."; return; fi
+  [[ "$icon" =~ $CPROF_ICON_RE ]] || die "invalid icon '$icon' (use a system symbol name like briefcase or house.fill)"
+  mkdir -p "$CPROF_HOME"
+  printf '%s\n' "$icon" > "$file"
+  echo "Icon for $name is now $icon."
+}
+
+cmd_use() {
+  local name="${1:-}"; require_profile "$name"
+  printf '%s\n' "$name" > "$PWD/$CPROF_PROFILE_FILE"
+  echo "Pinned $PWD to '$name'."
+}
+
+cmd_init() {
+  [[ "${1:-}" == "zsh" || "${1:-}" == "bash" ]] || die "usage: cprof init zsh|bash"
+  cat <<'EOF'
+# cprof: make `claude` follow the folder's profile.
+claude() { command cprof cli -- "$@"; }
+cprof-use() { eval "$(command cprof env "$@")"; }
+EOF
+}
+
+main() {
+  local cmd="${1:-list}"; shift || true
+  case "$cmd" in
+    add) cmd_add "$@" ;;
+    rm|remove) cmd_rm "$@" ;;
+    ls|list) cmd_list "$@" ;;
+    terminal|term) cmd_terminal "$@" ;;
+    code) cmd_terminal "${1:-}" --claude ;;
+    login) cmd_terminal "${1:-}" --login ;;
+    install-cli) cmd_install_cli ;;
+    cli|run) cmd_cli "$@" ;;
+    desktop) cmd_desktop "$@" ;;
+    app) cmd_app "$@" ;;
+    env) cmd_env "$@" ;;
+    which) resolve_profile "" ; echo ;;
+    desktop-pid) require_profile "${1:-}"; desktop_pid "$1" ;;
+    link) require_profile "${1:-}"; link_shared "$1" ;;
+    use) cmd_use "$@" ;;
+    icon) cmd_icon "$@" ;;
+    init) cmd_init "$@" ;;
+    -h|--help|help) usage ;;
+    *) usage >&2; exit 1 ;;
+  esac
+}
+
+main "$@"
