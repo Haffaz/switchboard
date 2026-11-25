@@ -25,7 +25,8 @@ final class MenuController: NSObject, NSMenuDelegate {
     override init() {
         super.init()
         statusItem.button?.image = MenuItems.barIcon()
-        statusItem.button?.toolTip = "Switchboard: Claude accounts"
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        statusItem.button?.toolTip = version.map { "Switchboard \($0)" } ?? "Switchboard"
         menu.delegate = self
         menu.autoenablesItems = false
         statusItem.menu = menu
@@ -66,7 +67,13 @@ final class MenuController: NSObject, NSMenuDelegate {
         if !Self.commandLineToolInstalled {
             menu.addItem(item("Install Command Line Tool", #selector(installCLI)))
         }
+        // Help opens the guide. Holding ⌥ turns it into Show Log, which is
+        // only needed when something has gone wrong.
         menu.addItem(item("Help", #selector(showHelp)))
+        let log = item("Show Log", #selector(showLog))
+        log.keyEquivalentModifierMask = [.option]
+        log.isAlternate = true
+        menu.addItem(log)
         menu.addItem(item("Quit Switchboard", #selector(quit), key: "q"))
     }
 
@@ -328,13 +335,12 @@ final class MenuController: NSObject, NSMenuDelegate {
     }
 
     @objc private func showHelp() {
-        switch Dialogs.help() {
-        case .done: break
-        case .guide: if let url = Dialogs.guideURL { NSWorkspace.shared.open(url) }
-        case .showLog:
-            Log.write("log opened")
-            NSWorkspace.shared.open(Log.fileURL)
-        }
+        if let url = Dialogs.guideURL { NSWorkspace.shared.open(url) }
+    }
+
+    @objc private func showLog() {
+        Log.write("log opened")
+        NSWorkspace.shared.open(Log.fileURL)
     }
 
     @objc private func quit() { NSApp.terminate(nil) }

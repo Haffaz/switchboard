@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Start with the log. In the Switchboard menu choose **Help**, then **Show Log**. It records each step of a sign-in and each quit, with times. It never contains sign-in codes.
+Start with the log. Open the Switchboard menu, hold **Option (⌥)**, and choose **Show Log** (it takes the place of Help). It records each step of a sign-in and each quit, with times. It never contains sign-in codes.
 
 The log file is `~/Library/Logs/Switchboard.log`.
 
@@ -107,4 +107,4 @@ Your Default account, in `~/.claude` and Claude Desktop's own data folder, is un
 
 ## Still stuck?
 
-Open an issue on GitHub. Include your macOS version, your Switchboard version (shown at the top of the **Help** window), and the relevant lines of the log.
+Open an issue on GitHub. Include your macOS version, your Switchboard version (rest the pointer on the menu bar icon to see it), and the relevant lines of the log.

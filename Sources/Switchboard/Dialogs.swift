@@ -117,25 +117,4 @@ enum Dialogs {
     static func error(_ text: String) {
         _ = run(makeAlert("Something went wrong", text, style: .warning))
     }
-
-    enum HelpChoice { case done, guide, showLog }
-
-    static func help() -> HelpChoice {
-        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-        let alert = makeAlert(version.map { "Switchboard \($0)" } ?? "Switchboard", """
-            Click an account to open its Claude Desktop.
-            Point at it for Claude Code and more.
-            A green dot means it is running.
-
-            Not affiliated with Anthropic.
-            """)
-        alert.addButton(withTitle: "Done")
-        alert.addButton(withTitle: "Open Guide")
-        alert.addButton(withTitle: "Show Log")
-        switch run(alert) {
-        case .alertSecondButtonReturn: return .guide
-        case .alertThirdButtonReturn: return .showLog
-        default: return .done
-        }
-    }
 }
