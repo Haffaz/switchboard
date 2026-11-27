@@ -43,7 +43,7 @@ To have it there after every restart, open **Settings…** from the menu and swi
 
 ## 2. Add an account
 
-Click the menu bar icon and choose **Add Account…**.
+Click the menu bar icon, choose **Settings…**, and click **+** under the account list.
 
 <p align="center"><img src="images/add-account.png" width="328" alt="The New Account dialog: one text field for the name"></p>
 
@@ -95,7 +95,7 @@ Pick an account on the left to:
 - **Choose what it shares** with other accounts.
 - **Remove it** with **Remove Account…**, or with **−** under the list.
 
-**+** under the list adds an account, the same as **Add Account…** in the menu.
+**+** under the list adds an account.
 
 ### Sharing
 

@@ -6,7 +6,7 @@
 A menu bar app for Claude Desktop and Claude Code.</p>
 
 <p align="center">
-  <img src="docs/images/menu.png" width="320" alt="The Switchboard menu: four accounts, two with a green dot because their Claude Desktop is running, then Add Account, Settings and Quit">
+  <img src="docs/images/menu.png" width="320" alt="The Switchboard menu: four accounts, two with a green dot because their Claude Desktop is running, then Settings and Quit">
 </p>
 <p align="center">
   <img src="docs/images/settings-sharing.png" width="560" alt="Switchboard Settings, Sharing tab: for each account, which other account it shares history, connectors and extensions with">
@@ -57,7 +57,7 @@ cd switchboard && ./build.sh --install
 
 ## Get started
 
-1. Click the two-cog icon in your menu bar and choose **Add Account…**.
+1. Click the two-cog icon in your menu bar, choose **Settings…**, and click **+** under the account list.
 2. Type a name, such as "Work".
 3. Sign in in the Claude window that opens.
 

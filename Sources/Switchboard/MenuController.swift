@@ -2,15 +2,17 @@ import AppKit
 import SwitchboardCore
 
 /// The menu bar menu: only what is used many times a day. Everything rare,
-/// or that needs explaining, lives in the Settings window.
+/// or that needs explaining (adding an account too), lives in Settings.
 ///
-///   ● [icon] Work               ▸   Open Claude Desktop      ⌘1
-///     [icon] Personal           ▸   Open Claude Code        ⇧⌘1
-///     [icon] Side      Sign In  ▸   Open Terminal
-///   ───                             Quit Claude Desktop      (while running)
-///   Add Account…           ⌘N
-///   Settings…              ⌘,
-///   Quit Switchboard       ⌘Q
+///   ● [icon] Work               ▸   [icon] Open Claude Desktop    ⌘1
+///     [icon] Personal           ▸   [icon] Open Claude Code      ⇧⌘1
+///     [icon] Side      Sign In  ▸   [icon] Open Terminal
+///   ───                             ───
+///     [icon] Settings…     ⌘,       [icon] Quit Claude Desktop  (while running)
+///     [icon] Quit Switchboard ⌘Q
+///
+/// Every row has an icon. macOS 26 adds one by itself to rows it knows,
+/// such as Settings, so giving each row its own keeps the column even.
 ///
 /// It draws at once from the last known accounts, then refreshes in the
 /// background and redraws if anything changed.
@@ -51,10 +53,8 @@ final class MenuController: NSObject, NSMenuDelegate {
                                     key: index < 9 ? "\(index + 1)" : ""))
         }
         menu.addItem(.separator())
-        menu.addItem(item("Add Account…", #selector(addAccount), key: "n"))
-        menu.addItem(item("Settings…", #selector(openSettings), key: ","))
-        menu.addItem(.separator())
-        menu.addItem(item("Quit Switchboard", #selector(quit), key: "q"))
+        menu.addItem(item("Settings…", #selector(openSettings), key: ",", icon: "gearshape"))
+        menu.addItem(item("Quit Switchboard", #selector(quit), key: "q", icon: "power"))
     }
 
     /// One account: its icon and name, a green dot while its Claude Desktop
@@ -74,22 +74,23 @@ final class MenuController: NSObject, NSMenuDelegate {
         let sub = NSMenu()
         sub.autoenablesItems = false
         sub.addItem(item(profile.needsDesktopSignIn ? "Sign In to Claude Desktop…" : "Open Claude Desktop",
-                         #selector(openDesktop(_:)), profile, key: key))
+                         #selector(openDesktop(_:)), profile, key: key, icon: "macwindow"))
         let code = item(profile.codeSignedIn ? "Open Claude Code" : "Sign In to Claude Code…",
-                        #selector(openCode(_:)), profile, key: key)
+                        #selector(openCode(_:)), profile, key: key, icon: "chevron.left.forwardslash.chevron.right")
         code.keyEquivalentModifierMask = [.command, .shift]
         sub.addItem(code)
-        sub.addItem(item("Open Terminal", #selector(openTerminal(_:)), profile))
+        sub.addItem(item("Open Terminal", #selector(openTerminal(_:)), profile, icon: "terminal"))
         if running {
             sub.addItem(.separator())
-            sub.addItem(item("Quit Claude Desktop", #selector(quitClaude(_:)), profile))
+            sub.addItem(item("Quit Claude Desktop", #selector(quitClaude(_:)), profile, icon: "xmark.circle"))
         }
         return sub
     }
 
     private func item(_ title: String, _ selector: Selector, _ profile: Profile? = nil,
-                      key: String = "") -> NSMenuItem {
+                      key: String = "", icon: String? = nil) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: selector, keyEquivalent: key)
+        item.image = icon.flatMap { MenuItems.symbol($0) }
         item.target = self
         item.representedObject = profile?.name
         return item
@@ -118,7 +119,6 @@ final class MenuController: NSObject, NSMenuDelegate {
         if let profile = profile(sender) { Task { await Actions.quit(profile) } }
     }
 
-    @objc private func addAccount() { Task { await Actions.addAccount() } }
     @objc private func openSettings() { SettingsWindow.shared.show() }
     @objc private func quit() { NSApp.terminate(nil) }
 }

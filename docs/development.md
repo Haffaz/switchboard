@@ -38,7 +38,7 @@ Sources/SwitchboardCore/      Every rule, once. No user interface.
   Launchers.swift               Terminal windows and Dock launchers
   Shell.swift                   running other programs, and asking Claude Code about its login
 Sources/Switchboard/          The menu bar app.
-  MenuController.swift          the menu bar menu: accounts, Add Account, Settings, Quit
+  MenuController.swift          the menu bar menu: accounts, Settings, Quit
   SettingsView.swift            the Settings window: Accounts, Sharing and General tabs
   SettingsModel.swift           what the Settings window shows, and the changes it asks for
   Actions.swift                 everything the app can do; the menu and Settings both call it
