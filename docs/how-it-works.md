@@ -32,23 +32,27 @@ If you want one account to differ, replace its link with a real file inside `~/.
 
 ## Optional sharing
 
-Three more things can be shared. Each is off until you switch it on, in **Settings → Sharing** or with `cprof share`.
+Beyond the items above, an account can share three more things with another account. You choose, for each account and each thing, which account it shares with. Nothing is shared until you choose.
 
-| Switch | What it shares | How |
+Make the choices in **Settings → Sharing**, on an account's page in **Settings → Accounts**, or with `cprof share`.
+
+| Thing | When Client shares it with Work | How |
 |---|---|---|
-| **Claude Code History** | Sessions, so `claude --resume` in any account lists every account's sessions. Also per-project memory and the saved file versions used to rewind. | Each account's history folders become links to the Default account's. |
-| **Claude Code Connectors** | MCP servers added for all projects (`claude mcp add --scope user`). | Copied from the Default account into each account's settings file. |
-| **Desktop Extensions** | Extensions and local MCP servers installed in Claude Desktop. | Copied from the Default account each time another account's Claude Desktop starts. |
+| **Claude Code History** | Client and Work use one set of sessions. `claude --resume` in either lists both accounts' sessions, with per-project memory and the saved file versions used to rewind. | Client's history folders become links to Work's. |
+| **Claude Code Connectors** | Work's MCP servers (those added with `claude mcp add --scope user`) are copied into Client. | Copied into Client's settings file, every time you open the menu or Settings. |
+| **Desktop Extensions** | Work's Claude Desktop extensions and local MCP servers are copied into Client's Claude Desktop. | Copied each time Client's Claude Desktop starts, never while it runs. |
 
-The Default account is always the source. Add a connector or install an extension there, and the other accounts receive it.
+Rules that keep this safe:
 
-Things to know:
+- **Default is only ever a source.** Other accounts can share from it, but Switchboard never writes to the setup you had before. Default's own choices are not shown.
+- **History can chain but never loop.** If Client shares history with Work and Work with Default, all three use Default's sessions. Switchboard refuses a choice that would go round in a circle.
+- **Sessions are moved, never overwritten.** When an account starts sharing history, its existing sessions are moved into the shared folder. If the same file exists in both places, the account's copy is kept aside in a folder ending `.before-sharing`.
+- **Copies keep what the account added.** An account keeps any connector it added itself; on a name clash, the source's version wins. An extension installed only in the account is replaced the next time its Claude Desktop starts.
+- **A copied connector may still ask you to sign in.** The list of servers is copied; each account's login to a server is not.
+- **An account that holds others' history cannot be removed** until they stop sharing it, because their sessions live in its folder.
+- **Stopping** removes the link or stops the copying. What was already copied stays. Shared sessions stay where they were, and the account that stopped starts with a fresh history.
 
-- **History moves files once.** When you switch it on, sessions an account already had are moved into the shared folder. If the same file exists in both places, the account's copy is kept aside in a folder ending `.before-sharing`, never overwritten.
-- **Connectors and extensions are copies.** An account keeps any connector it added itself. On a name clash, Default's version wins. An extension installed only in another account is replaced the next time that account's Claude Desktop starts.
-- **A copied connector may still ask you to sign in.** The list of servers is shared; each account's login to a server is not.
-- **Sharing history mixes accounts.** If one account is your employer's, its sessions become readable from the others. Check that this is allowed before you switch it on.
-- **Switching a share off** stops the linking or copying. What was already copied stays. Shared history stays with the Default account, and the other accounts start fresh.
+Think before sharing history with an employer's account: its sessions become readable from the other account, and the other way round.
 
 ### What can never be shared
 
@@ -125,7 +129,7 @@ A cloned repository can contain one of these files. It can only name an account 
 |---|---|
 | `~/.claude-profiles/<name>/` | One folder per account, readable only by you |
 | `~/.claude-profiles/.launch/` | Small scripts that Terminal windows run |
-| `~/.claude-profiles/.sharing.json` | Which optional sharing is switched on |
+| `~/.claude-profiles/.sharing.json` | Which account shares what with which |
 | `~/.claude-profiles/.default-icon`, `.default-label` | The Default account's icon and shown name, if you set them |
 | `~/Applications/Claude (<name>).app` | Dock launchers, if you make them |
 | `~/.local/bin/cprof` | A link to the command-line tool, if you install it |

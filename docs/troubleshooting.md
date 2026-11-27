@@ -40,17 +40,25 @@ Switchboard asks Claude Code about its sign-in at most every 10 seconds. Close t
 
 ### A new account has no MCP servers
 
-MCP servers are per account unless you share them. Switch on **Settings → Sharing → Claude Code Connectors**, and the servers you added in Default are copied to the other accounts. A copied server may still ask you to sign in once per account.
+MCP servers are per account unless you share them. In **Settings → Sharing**, set the new account's Connectors to the account that has the servers, and they are copied in. A copied server may still ask you to sign in once per account.
 
 ### A connector I added does not show up in another account
 
-Connectors are copied from Default only. Add it while using the Default account, then open the Switchboard menu or run `cprof sync`.
+Connectors are copied from the account chosen in **Settings → Sharing**, not from every account. Add it in that account, then open the Switchboard menu or run `cprof sync`.
 
 ### Extensions are missing in another account's Claude Desktop
 
-Switch on **Settings → Sharing → Desktop Extensions**, then quit and reopen that account's Claude Desktop. Extensions are copied only when its Claude Desktop starts, never while it is running.
+In **Settings → Sharing**, set that account's Extensions to the account that has them, then quit and reopen its Claude Desktop. Extensions are copied only when its Claude Desktop starts, never while it is running.
 
-### Sessions are missing after I switched Claude Code History on
+### "That would share history in a loop"
+
+History can chain from one account to the next, but not back round to where it started. Pick an account further along the chain instead, or Default.
+
+### "(account) holds shared history"
+
+Another account keeps its Claude Code sessions in this one, so removing it would delete them. In **Settings → Sharing**, set that account's History to "Not shared" first.
+
+### Sessions are missing after I started sharing history
 
 Look in the account's folder, `~/.claude-profiles/<name>/cli`, for a folder ending `.before-sharing`. Switchboard puts sessions there when the same file existed in both places, so that nothing is overwritten.
 

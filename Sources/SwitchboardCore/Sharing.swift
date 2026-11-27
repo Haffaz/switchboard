@@ -1,13 +1,13 @@
 import Foundation
 
-/// The optional things accounts can share, beyond the always-shared rules,
-/// skills, plugins and settings. Each is off until switched on.
+/// The things an account can share with another, beyond the rules, skills,
+/// plugins and settings that every account always shares.
 public enum SharedThing: String, CaseIterable, Codable, Sendable {
-    /// Claude Code sessions: one folder, linked into every account.
+    /// Claude Code sessions. Truly shared: both accounts use one folder.
     case history
-    /// Claude Code MCP servers: copied from the default account.
+    /// Claude Code MCP servers, copied from the other account.
     case connectors
-    /// Claude Desktop extensions and local MCP servers: copied from the default account.
+    /// Claude Desktop extensions and local MCP servers, copied from the other account.
     case extensions
 
     public var title: String {
@@ -18,21 +18,35 @@ public enum SharedThing: String, CaseIterable, Codable, Sendable {
         }
     }
 
-    public var summary: String { summary(source: "Default") }
-
-    /// What it does, naming the account things are shared from.
-    public func summary(source: String) -> String {
+    /// A one-word name for table headings.
+    public var shortTitle: String {
         switch self {
-        case .history: return "Resume any account's Claude Code sessions from any other account."
-        case .connectors: return "MCP servers added in \(source) are copied to the other accounts."
-        case .extensions: return "Extensions installed in \(source)'s Claude Desktop are copied to the other accounts."
+        case .history: return "History"
+        case .connectors: return "Connectors"
+        case .extensions: return "Extensions"
+        }
+    }
+
+    /// What choosing a source does, in a sentence.
+    public var summary: String {
+        switch self {
+        case .history: return "Both accounts use one set of Claude Code sessions, so either can resume them."
+        case .connectors: return "The other account's MCP servers are copied in."
+        case .extensions: return "The other account's Desktop extensions are copied in when Claude Desktop starts."
         }
     }
 }
 
-/// Sharing between accounts. The default account is always the source: its
-/// folders are read, and for history other accounts link to them. Nothing
-/// here reads or copies a sign-in.
+/// Who shares what with whom. For each account and each kind of thing, an
+/// account may name one other account as its source:
+///
+/// - history: the two accounts end up using one folder. Chains are allowed
+///   (A shares with B, B with C: all three share C's folder) but loops are not.
+/// - connectors and extensions: copied from the source into the account.
+///
+/// The default account can be a source but is never a target: Switchboard
+/// never writes to the setup you had before. Nothing here reads or copies a
+/// sign-in.
 public struct Sharing: Sendable {
     public let store: AccountStore
     public init(store: AccountStore = AccountStore()) { self.store = store }
@@ -51,84 +65,157 @@ public struct Sharing: Sendable {
     static let desktopConfig = "claude_desktop_config.json"
     static let serversKey = "mcpServers"
 
-    private var otherAccounts: [String] { store.names().filter { $0 != Profile.defaultName } }
+    // MARK: - Reading the plan
 
-    // MARK: - Settings
-
-    public func enabled() -> Set<SharedThing> {
-        guard let data = try? Data(contentsOf: settingsFile),
-              let things = try? JSONDecoder().decode([SharedThing].self, from: data) else { return [] }
-        return Set(things)
+    private struct Plan: Codable {
+        var version = 2
+        /// account -> thing -> source account
+        var sources: [String: [String: String]] = [:]
     }
 
-    public func isOn(_ thing: SharedThing) -> Bool { enabled().contains(thing) }
+    /// Every account's sources, for accounts that still exist.
+    public func sources() -> [String: [SharedThing: String]] {
+        let existing = Set(store.names())
+        var result: [String: [SharedThing: String]] = [:]
+        for (account, things) in loadPlan().sources where existing.contains(account) {
+            var mapped: [SharedThing: String] = [:]
+            for (raw, source) in things {
+                if let thing = SharedThing(rawValue: raw), existing.contains(source), source != account {
+                    mapped[thing] = source
+                }
+            }
+            if !mapped.isEmpty { result[account] = mapped }
+        }
+        return result
+    }
 
-    /// Switch a kind of sharing on or off, and bring every account in line.
-    /// Returns notes worth showing, such as files kept aside.
-    @discardableResult
-    public func set(_ thing: SharedThing, on: Bool) throws -> [String] {
-        var things = enabled()
-        if on { things.insert(thing) } else { things.remove(thing) }
+    /// The account `name` shares `thing` with, or nil.
+    public func source(_ thing: SharedThing, for name: String) -> String? { sources()[name]?[thing] }
+
+    /// Accounts that take `thing` directly from `name`.
+    public func dependents(of name: String, for thing: SharedThing) -> [String] {
+        sources().filter { $0.value[thing] == name }.map(\.key).sorted()
+    }
+
+    /// The account whose folder holds `name`'s history: follow sources to the end.
+    public func historyRoot(of name: String) -> String {
+        let all = sources()
+        var current = name, seen: Set<String> = [name]
+        while let next = all[current]?[.history], !seen.contains(next) {
+            seen.insert(next)
+            current = next
+        }
+        return current
+    }
+
+    /// Accounts whose history lives in `name`'s folder, other than `name` itself.
+    public func historySharers(of name: String) -> [String] {
+        sources().keys.filter { $0 != name && historyRoot(of: $0) == name }.sorted()
+    }
+
+    private func loadPlan() -> Plan {
+        guard let data = try? Data(contentsOf: settingsFile) else { return Plan() }
+        if let plan = try? JSONDecoder().decode(Plan.self, from: data) { return plan }
+        // The first form of this file was a list of things shared from the
+        // default account with every other account.
+        if let legacy = try? JSONDecoder().decode([SharedThing].self, from: data) {
+            var plan = Plan()
+            for name in store.names() where name != Profile.defaultName {
+                for thing in legacy { plan.sources[name, default: [:]][thing.rawValue] = Profile.defaultName }
+            }
+            return plan
+        }
+        return Plan()
+    }
+
+    private func save(_ plan: Plan) throws {
         try fm.createDirectory(at: paths.profilesHome, withIntermediateDirectories: true)
-        let ordered = SharedThing.allCases.filter(things.contains)
-        try JSONEncoder().encode(ordered).write(to: settingsFile, options: .atomic)
-        if !on, thing == .history { otherAccounts.forEach(unlinkHistory) }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        try encoder.encode(plan).write(to: settingsFile, options: .atomic)
+    }
+
+    // MARK: - Changing the plan
+
+    /// Why `target` cannot share `thing` from `source`, or nil if it can.
+    public func refusal(_ thing: SharedThing, for target: String, from source: String) -> String? {
+        if target == Profile.defaultName { return "The default account is never changed, so it can only be shared from." }
+        if source == target { return "An account cannot share with itself." }
+        guard store.exists(target), store.exists(source) else { return "That account does not exist." }
+        if thing == .history, historyRoot(of: source) == target {
+            return "That would share history in a loop."
+        }
+        return nil
+    }
+
+    /// Make `target` share `thing` with `source`, or stop sharing it (nil),
+    /// then bring every account in line. Returns notes worth showing, such
+    /// as sessions kept aside.
+    @discardableResult
+    public func setSource(_ thing: SharedThing, for target: String, to source: String?) throws -> [String] {
+        try store.require(target)
+        if let source, let reason = refusal(thing, for: target, from: source) { throw SwitchboardError(reason) }
+        var plan = loadPlan()
+        var things = plan.sources[target] ?? [:]
+        things[thing.rawValue] = source
+        plan.sources[target] = things.isEmpty ? nil : things
+        try save(plan)
+        if source == nil, thing == .history { unlinkHistory(target) }
         return try apply()
     }
 
-    /// Make every account match the current settings. Safe to run any time.
-    /// Desktop extensions are left to `prepareDesktop`, which runs when an
-    /// account's Claude Desktop is about to start.
+    /// Forget an account that is being removed: its own sources, and every
+    /// copy taken from it. History cannot be forgotten this way; callers must
+    /// first check `historySharers(of:)`, because those accounts' sessions
+    /// live in the folder being removed.
+    public func forget(_ name: String) throws {
+        var plan = loadPlan()
+        plan.sources[name] = nil
+        for account in plan.sources.keys {
+            plan.sources[account] = plan.sources[account]?.filter { $0.value != name }
+            if plan.sources[account]?.isEmpty == true { plan.sources[account] = nil }
+        }
+        try save(plan)
+    }
+
+    /// Make every account match the plan. Safe to run any time; does nothing
+    /// when everything is already in place. Desktop extensions are left to
+    /// `prepareDesktop`, which runs just before an account's Claude starts.
     @discardableResult
     public func apply() throws -> [String] {
-        let things = enabled()
         var notes: [String] = []
-        for name in otherAccounts {
-            if things.contains(.history) { notes += try linkHistory(name) }
-            if things.contains(.connectors) { try syncConnectors(name) }
+        for (name, things) in sources().sorted(by: { $0.key < $1.key }) {
+            if things[.history] != nil { notes += try linkHistory(name, to: historyRoot(of: name)) }
+            if let source = things[.connectors] { try syncConnectors(name, from: source) }
         }
         return notes
     }
 
-    // MARK: - Status
+    // MARK: - Where each account keeps things
 
-    /// A short, current fact about one kind of sharing, for showing next to
-    /// its switch: how much there is to share, or how far it has reached.
-    public func statusLine(_ thing: SharedThing) -> String {
-        let others = otherAccounts
-        switch thing {
-        case .history:
-            guard isOn(.history) else { return "" }
-            let linked = others.filter { name in
-                Self.historyFolders.contains { isLink(store.cliDir(name).appendingPathComponent($0)) }
-            }.count
-            return "Shared with \(Self.count(linked, "account"))"
-        case .connectors:
-            let servers = (Self.object(paths.defaultCLIJSON)?[Self.serversKey] as? [String: Any])?.count ?? 0
-            return servers == 0 ? "No MCP servers in the default account yet"
-                                : "\(Self.count(servers, "MCP server")) in the default account"
-        case .extensions:
-            let folder = paths.defaultDesktopDir.appendingPathComponent("Claude Extensions")
-            let installed = ((try? fm.contentsOfDirectory(atPath: folder.path)) ?? []).filter { !$0.hasPrefix(".") }.count
-            return installed == 0 ? "No extensions in the default account yet"
-                                  : "\(Self.count(installed, "extension")) in the default account"
-        }
+    private func cliJSON(_ name: String) -> URL {
+        name == Profile.defaultName ? paths.defaultCLIJSON : store.cliDir(name).appendingPathComponent(".claude.json")
     }
 
-    static func count(_ number: Int, _ noun: String) -> String {
-        "\(number) \(noun)\(number == 1 ? "" : "s")"
+    private func desktopData(_ name: String) -> URL {
+        store.desktopDir(name) ?? paths.defaultDesktopDir
     }
 
     // MARK: - Claude Code history
 
-    /// Point an account's history folders at the default account's. Sessions
+    /// Point an account's history folders at the root account's. Sessions
     /// the account already had are moved in first, so nothing is lost.
-    func linkHistory(_ name: String) throws -> [String] {
+    func linkHistory(_ name: String, to root: String) throws -> [String] {
         var notes: [String] = []
         for folder in Self.historyFolders {
-            let shared = paths.defaultCLIDir.appendingPathComponent(folder)
+            let shared = store.cliDir(root).appendingPathComponent(folder)
             let own = store.cliDir(name).appendingPathComponent(folder)
-            guard isDirectory(shared) else { continue }
+            if !isDirectory(shared) {
+                // The default account's folders are never created or changed
+                // by Switchboard; another account's can be.
+                guard root != Profile.defaultName else { continue }
+                try fm.createDirectory(at: shared, withIntermediateDirectories: true)
+            }
             if let target = try? fm.destinationOfSymbolicLink(atPath: own.path) {
                 if target == shared.path { continue }  // already linked: leave it alone
                 try? fm.removeItem(at: own)
@@ -150,8 +237,8 @@ public struct Sharing: Sendable {
         return notes
     }
 
-    /// Stop sharing: remove the links. The shared history stays with the
-    /// default account, and this account starts a fresh folder when next used.
+    /// Stop sharing: remove the links. The shared sessions stay where they
+    /// are, and this account starts a fresh folder when next used.
     func unlinkHistory(_ name: String) {
         for folder in Self.historyFolders {
             let own = store.cliDir(name).appendingPathComponent(folder)
@@ -179,12 +266,12 @@ public struct Sharing: Sendable {
 
     // MARK: - Claude Code connectors
 
-    /// Copy the default account's MCP servers into an account's settings
-    /// file. Servers the account added itself are kept; on a name clash the
-    /// default account's version wins. Returns true if the file changed.
+    /// Copy `source`'s MCP servers into `name`'s settings file. Servers the
+    /// account added itself are kept; on a name clash the source's version
+    /// wins. Returns true if the file changed.
     @discardableResult
-    func syncConnectors(_ name: String) throws -> Bool {
-        try mergeServers(from: paths.defaultCLIJSON, into: store.cliDir(name).appendingPathComponent(".claude.json"))
+    func syncConnectors(_ name: String, from source: String) throws -> Bool {
+        try mergeServers(from: cliJSON(source), into: cliJSON(name))
     }
 
     /// Merge the "mcpServers" entry of one JSON file into another, leaving
@@ -193,7 +280,7 @@ public struct Sharing: Sendable {
         guard let wanted = Self.object(source)?[Self.serversKey] as? [String: Any], !wanted.isEmpty else { return false }
         var document = Self.object(target) ?? [:]
         let current = document[Self.serversKey] as? [String: Any] ?? [:]
-        let merged = current.merging(wanted) { _, fromDefault in fromDefault }
+        let merged = current.merging(wanted) { _, fromSource in fromSource }
         guard !NSDictionary(dictionary: merged).isEqual(to: current) else { return false }
         document[Self.serversKey] = merged
         let data = try JSONSerialization.data(withJSONObject: document, options: [.prettyPrinted, .withoutEscapingSlashes])
@@ -210,31 +297,32 @@ public struct Sharing: Sendable {
 
     // MARK: - Claude Desktop extensions
 
-    /// Bring an account's Claude Desktop extensions in line with the default
-    /// account's, if that sharing is on. Call this just before the account's
-    /// Claude Desktop starts, never while it is running. Returns true if
-    /// anything was copied.
+    /// Bring an account's Claude Desktop extensions in line with its source
+    /// account's, if it has one. Call this just before the account's Claude
+    /// Desktop starts, never while it is running. Returns true if anything
+    /// was copied.
     @discardableResult
     public func prepareDesktop(_ name: String) throws -> Bool {
-        guard isOn(.extensions), name != Profile.defaultName, let target = store.desktopDir(name) else { return false }
-        let source = paths.defaultDesktopDir
+        guard name != Profile.defaultName, let source = self.source(.extensions, for: name),
+              let target = store.desktopDir(name) else { return false }
+        let from = desktopData(source)
         try fm.createDirectory(at: target, withIntermediateDirectories: true)
-        var changed = try mergeServers(from: source.appendingPathComponent(Self.desktopConfig),
+        var changed = try mergeServers(from: from.appendingPathComponent(Self.desktopConfig),
                                        into: target.appendingPathComponent(Self.desktopConfig))
 
-        let registry = source.appendingPathComponent(Self.extensionRegistry)
+        let registry = from.appendingPathComponent(Self.extensionRegistry)
         guard fm.fileExists(atPath: registry.path) else { return changed }
         let upToDate = fm.contentsEqual(atPath: registry.path, andPath: target.appendingPathComponent(Self.extensionRegistry).path)
             && Self.extensionItems.allSatisfy { item in
-                !fm.fileExists(atPath: source.appendingPathComponent(item).path)
+                !fm.fileExists(atPath: from.appendingPathComponent(item).path)
                     || fm.fileExists(atPath: target.appendingPathComponent(item).path)
             }
         guard !upToDate else { return changed }
         for item in Self.extensionItems {
-            let from = source.appendingPathComponent(item), to = target.appendingPathComponent(item)
-            guard fm.fileExists(atPath: from.path) else { continue }
-            try? fm.removeItem(at: to)
-            try fm.copyItem(at: from, to: to)  // on APFS this shares storage until either copy changes
+            let source = from.appendingPathComponent(item), destination = target.appendingPathComponent(item)
+            guard fm.fileExists(atPath: source.path) else { continue }
+            try? fm.removeItem(at: destination)
+            try fm.copyItem(at: source, to: destination)  // on APFS this shares storage until either copy changes
             changed = true
         }
         return changed

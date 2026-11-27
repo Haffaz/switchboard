@@ -16,98 +16,126 @@ extension Sandbox {
     func servers(_ url: URL) -> [String] {
         ((json(url)?["mcpServers"] as? [String: Any]) ?? [:]).keys.sorted()
     }
+
+    func cliJSON(_ name: String) -> URL { store.cliDir(name).appendingPathComponent(".claude.json") }
+    func projects(_ name: String) -> URL { store.cliDir(name).appendingPathComponent("projects") }
 }
 
-@Suite("Sharing settings")
-struct SharingSettingsTests {
-    @Test("Everything is off until switched on, and the choice is remembered")
-    func offByDefault() throws {
+@Suite("Who shares with whom")
+struct SharingPlanTests {
+    @Test("Nothing is shared until chosen, per account and per thing")
+    func perAccount() throws {
         let box = try Sandbox()
-        #expect(box.sharing.enabled().isEmpty)
-        try box.sharing.set(.connectors, on: true)
-        try box.sharing.set(.history, on: true)
-        #expect(Sharing(store: box.store).enabled() == [.history, .connectors])
-        try box.sharing.set(.history, on: false)
-        #expect(box.sharing.enabled() == [.connectors])
+        try box.store.add("work"); try box.store.add("client"); try box.store.add("home")
+        #expect(box.sharing.sources().isEmpty)
+        try box.sharing.setSource(.connectors, for: "client", to: "work")
+        try box.sharing.setSource(.history, for: "work", to: "default")
+        #expect(box.sharing.source(.connectors, for: "client") == "work")
+        #expect(box.sharing.source(.history, for: "client") == nil)
+        #expect(box.sharing.source(.history, for: "work") == "default")
+        #expect(box.sharing.sources()["home"] == nil)
+        #expect(box.sharing.dependents(of: "work", for: .connectors) == ["client"])
     }
 
-    @Test("The settings file is not mistaken for an account, and damage reads as all off")
-    func settingsFileIsNotAnAccount() throws {
+    @Test("The default account can be shared from, never shared into", arguments: SharedThing.allCases)
+    func defaultIsOnlyASource(thing: SharedThing) throws {
         let box = try Sandbox()
-        try box.sharing.set(.history, on: true)
-        #expect(box.store.names() == ["default"])
-        try box.write("not json", to: box.store.paths.profilesHome.appendingPathComponent(".sharing.json"))
-        #expect(box.sharing.enabled().isEmpty)
-    }
-}
-
-@Suite("Sharing status lines")
-struct SharingStatusTests {
-    @Test("Each line says how much there is to share, with correct plurals")
-    func lines() throws {
-        let box = try Sandbox()
-        #expect(box.sharing.statusLine(.history).isEmpty)
-        #expect(box.sharing.statusLine(.connectors) == "No MCP servers in the default account yet")
-        #expect(box.sharing.statusLine(.extensions) == "No extensions in the default account yet")
-
-        try box.write(#"{"mcpServers":{"a":{}}}"#, to: box.store.paths.defaultCLIJSON)
-        try box.write("x", to: box.defaultDesktop.appendingPathComponent("Claude Extensions/one/a.js"))
-        try box.write("x", to: box.defaultDesktop.appendingPathComponent("Claude Extensions/two/a.js"))
-        try box.write("x", to: box.defaultDesktop.appendingPathComponent("Claude Extensions/.DS_Store"))
-        #expect(box.sharing.statusLine(.connectors) == "1 MCP server in the default account")
-        #expect(box.sharing.statusLine(.extensions) == "2 extensions in the default account")
-    }
-
-    @Test("Descriptions name the account things are shared from")
-    func summaries() {
-        #expect(SharedThing.connectors.summary(source: "Personal") == "MCP servers added in Personal are copied to the other accounts.")
-        #expect(SharedThing.connectors.summary == SharedThing.connectors.summary(source: "Default"))
-    }
-
-    @Test("History reports how many accounts are linked")
-    func history() throws {
-        let box = try Sandbox()
-        try box.write("s", to: box.defaultCLI.appendingPathComponent("projects/-r/a.jsonl"))
         try box.store.add("work")
-        try box.sharing.set(.history, on: true)
-        #expect(box.sharing.statusLine(.history) == "Shared with 1 account")
-        try box.store.add("home")
-        try box.sharing.apply()
-        #expect(box.sharing.statusLine(.history) == "Shared with 2 accounts")
+        #expect(throws: SwitchboardError.self) { try box.sharing.setSource(thing, for: "default", to: "work") }
+        #expect(throws: SwitchboardError.self) { try box.sharing.setSource(thing, for: "work", to: "work") }
+        #expect(throws: SwitchboardError.self) { try box.sharing.setSource(thing, for: "work", to: "ghost") }
+        try box.sharing.setSource(thing, for: "work", to: "default")
+        #expect(box.sharing.source(thing, for: "work") == "default")
+    }
+
+    @Test("History can chain, but never loop")
+    func noLoops() throws {
+        let box = try Sandbox()
+        try box.store.add("a"); try box.store.add("b"); try box.store.add("c")
+        try box.sharing.setSource(.history, for: "a", to: "b")
+        try box.sharing.setSource(.history, for: "b", to: "c")
+        #expect(box.sharing.historyRoot(of: "a") == "c")
+        #expect(box.sharing.historySharers(of: "c") == ["a", "b"])
+        #expect(box.sharing.refusal(.history, for: "c", from: "a") != nil)
+        #expect(throws: SwitchboardError.self) { try box.sharing.setSource(.history, for: "c", to: "a") }
+        // Copies can point both ways without harm.
+        try box.sharing.setSource(.connectors, for: "a", to: "c")
+        try box.sharing.setSource(.connectors, for: "c", to: "a")
+    }
+
+    @Test("Removing an account forgets copies taken from it")
+    func forget() throws {
+        let box = try Sandbox()
+        try box.store.add("work"); try box.store.add("client")
+        try box.sharing.setSource(.connectors, for: "client", to: "work")
+        try box.sharing.setSource(.extensions, for: "work", to: "default")
+        try box.sharing.forget("work")
+        #expect(box.sharing.sources().isEmpty)
+    }
+
+    @Test("A damaged settings file reads as nothing shared; the first form is still understood")
+    func reading() throws {
+        let box = try Sandbox()
+        try box.store.add("work")
+        let file = box.store.paths.profilesHome.appendingPathComponent(".sharing.json")
+        try box.write("not json", to: file)
+        #expect(box.sharing.sources().isEmpty)
+        try box.write(#"["connectors"]"#, to: file)
+        #expect(box.sharing.source(.connectors, for: "work") == "default")
+        #expect(box.store.names() == ["default", "work"])  // the settings file is not an account
     }
 }
 
 @Suite("Sharing Claude Code history")
 struct SharedHistoryTests {
-    @Test("Other accounts link to the default account's history folders")
+    @Test("An account links to its source's history folders")
     func links() throws {
         let box = try Sandbox()
         try box.write("s1", to: box.defaultCLI.appendingPathComponent("projects/-repo/one.jsonl"))
         try box.store.add("work")
-        try box.sharing.set(.history, on: true)
-        let own = box.store.cliDir("work").appendingPathComponent("projects")
-        #expect(box.linkTarget(own) == box.defaultCLI.appendingPathComponent("projects").path)
-        #expect(box.read(own.appendingPathComponent("-repo/one.jsonl")) == "s1")
-        // Folders the default account does not have are not invented.
-        #expect(!box.exists(box.store.cliDir("work").appendingPathComponent("todos")))
+        try box.sharing.setSource(.history, for: "work", to: "default")
+        #expect(box.linkTarget(box.projects("work")) == box.defaultCLI.appendingPathComponent("projects").path)
+        #expect(box.read(box.projects("work").appendingPathComponent("-repo/one.jsonl")) == "s1")
+        // The default account's missing folders are not invented.
         #expect(!box.exists(box.defaultCLI.appendingPathComponent("todos")))
     }
 
-    @Test("Sessions an account already had are moved into the shared folder, not lost")
+    @Test("Two added accounts can share with each other, leaving the default account alone")
+    func betweenAddedAccounts() throws {
+        let box = try Sandbox()
+        try box.store.add("work"); try box.store.add("client")
+        try box.write("client's", to: box.projects("client").appendingPathComponent("-c/x.jsonl"))
+        try box.sharing.setSource(.history, for: "client", to: "work")
+        #expect(box.linkTarget(box.projects("client")) == box.projects("work").path)
+        #expect(box.read(box.projects("work").appendingPathComponent("-c/x.jsonl")) == "client's")
+        #expect(!box.exists(box.defaultCLI.appendingPathComponent("projects")))
+    }
+
+    @Test("A chain shares one folder: the end of the chain's")
+    func chains() throws {
+        let box = try Sandbox()
+        try box.store.add("a"); try box.store.add("b"); try box.store.add("c")
+        try box.write("from a", to: box.projects("a").appendingPathComponent("-r/a.jsonl"))
+        try box.sharing.setSource(.history, for: "a", to: "b")
+        try box.sharing.setSource(.history, for: "b", to: "c")
+        #expect(box.linkTarget(box.projects("a")) == box.projects("c").path)
+        #expect(box.linkTarget(box.projects("b")) == box.projects("c").path)
+        #expect(box.read(box.projects("c").appendingPathComponent("-r/a.jsonl")) == "from a")
+    }
+
+    @Test("Sessions an account already had are moved in, not lost")
     func mergesExisting() throws {
         let box = try Sandbox()
         try box.write("default", to: box.defaultCLI.appendingPathComponent("projects/-repo/a.jsonl"))
         try box.store.add("work")
-        let own = box.store.cliDir("work").appendingPathComponent("projects")
-        try box.write("same repo", to: own.appendingPathComponent("-repo/b.jsonl"))
-        try box.write("other repo", to: own.appendingPathComponent("-other/c.jsonl"))
+        try box.write("same repo", to: box.projects("work").appendingPathComponent("-repo/b.jsonl"))
+        try box.write("other repo", to: box.projects("work").appendingPathComponent("-other/c.jsonl"))
 
-        #expect(try box.sharing.set(.history, on: true).isEmpty)
+        #expect(try box.sharing.setSource(.history, for: "work", to: "default").isEmpty)
         let shared = box.defaultCLI.appendingPathComponent("projects")
         #expect(box.read(shared.appendingPathComponent("-repo/a.jsonl")) == "default")
         #expect(box.read(shared.appendingPathComponent("-repo/b.jsonl")) == "same repo")
         #expect(box.read(shared.appendingPathComponent("-other/c.jsonl")) == "other repo")
-        #expect(box.linkTarget(own) == shared.path)
     }
 
     @Test("A file that exists in both places is kept aside, never overwritten")
@@ -115,53 +143,44 @@ struct SharedHistoryTests {
         let box = try Sandbox()
         try box.write("default's", to: box.defaultCLI.appendingPathComponent("projects/-repo/same.jsonl"))
         try box.store.add("work")
-        let cli = box.store.cliDir("work")
-        try box.write("work's", to: cli.appendingPathComponent("projects/-repo/same.jsonl"))
+        try box.write("work's", to: box.projects("work").appendingPathComponent("-repo/same.jsonl"))
 
-        let notes = try box.sharing.set(.history, on: true)
-        #expect(notes.count == 1)
+        #expect(try box.sharing.setSource(.history, for: "work", to: "default").count == 1)
         #expect(box.read(box.defaultCLI.appendingPathComponent("projects/-repo/same.jsonl")) == "default's")
-        #expect(box.read(cli.appendingPathComponent("projects.before-sharing/-repo/same.jsonl")) == "work's")
-        #expect(box.linkTarget(cli.appendingPathComponent("projects")) != nil)
+        let aside = box.store.cliDir("work").appendingPathComponent("projects.before-sharing/-repo/same.jsonl")
+        #expect(box.read(aside) == "work's")
     }
 
-    @Test("An existing link is left alone, and a link pointing elsewhere is corrected")
-    func relinking() throws {
+    @Test("Stopping removes the links; the shared sessions stay with the source")
+    func stop() throws {
         let box = try Sandbox()
         try box.write("s1", to: box.defaultCLI.appendingPathComponent("projects/-repo/one.jsonl"))
         try box.store.add("work")
-        try box.sharing.set(.history, on: true)
-        let own = box.store.cliDir("work").appendingPathComponent("projects")
-        let created = try FileManager.default.attributesOfItem(atPath: own.path)[.creationDate] as? Date
-        try box.sharing.apply()
-        #expect(try FileManager.default.attributesOfItem(atPath: own.path)[.creationDate] as? Date == created)
-
-        try FileManager.default.removeItem(at: own)
-        try FileManager.default.createSymbolicLink(at: own, withDestinationURL: box.home)
-        try box.sharing.apply()
-        #expect(box.linkTarget(own) == box.defaultCLI.appendingPathComponent("projects").path)
-    }
-
-    @Test("Switching it off removes the links and leaves the history with the default account")
-    func unlink() throws {
-        let box = try Sandbox()
-        try box.write("s1", to: box.defaultCLI.appendingPathComponent("projects/-repo/one.jsonl"))
-        try box.store.add("work")
-        try box.sharing.set(.history, on: true)
-        try box.sharing.set(.history, on: false)
-        #expect(!box.exists(box.store.cliDir("work").appendingPathComponent("projects")))
+        try box.sharing.setSource(.history, for: "work", to: "default")
+        try box.sharing.setSource(.history, for: "work", to: nil)
+        #expect(!box.exists(box.projects("work")))
         #expect(box.read(box.defaultCLI.appendingPathComponent("projects/-repo/one.jsonl")) == "s1")
     }
 
-    @Test("Applying twice changes nothing, and a new account picks the sharing up")
-    func idempotentAndNewAccounts() throws {
+    @Test("Switching source moves the account's link; applying again changes nothing")
+    func switching() throws {
+        let box = try Sandbox()
+        try box.write("d", to: box.defaultCLI.appendingPathComponent("projects/-d/d.jsonl"))
+        try box.store.add("work"); try box.store.add("client")
+        try box.sharing.setSource(.history, for: "client", to: "default")
+        try box.sharing.setSource(.history, for: "client", to: "work")
+        #expect(box.linkTarget(box.projects("client")) == box.projects("work").path)
+        #expect(try box.sharing.apply().isEmpty)
+        #expect(box.linkTarget(box.projects("client")) == box.projects("work").path)
+    }
+
+    @Test("Removing an account that shares into another deletes links, not the shared sessions")
+    func removingADependent() throws {
         let box = try Sandbox()
         try box.write("s1", to: box.defaultCLI.appendingPathComponent("projects/-repo/one.jsonl"))
-        try box.sharing.set(.history, on: true)
-        try box.store.add("later")
-        #expect(try box.sharing.apply().isEmpty)
-        #expect(try box.sharing.apply().isEmpty)
-        #expect(box.linkTarget(box.store.cliDir("later").appendingPathComponent("projects")) != nil)
+        try box.store.add("work")
+        try box.sharing.setSource(.history, for: "work", to: "default")
+        try box.store.remove("work")
         #expect(box.read(box.defaultCLI.appendingPathComponent("projects/-repo/one.jsonl")) == "s1")
     }
 }
@@ -175,28 +194,37 @@ struct SharedConnectorsTests {
         let box = try Sandbox()
         try box.write(Self.defaultFile, to: box.store.paths.defaultCLIJSON)
         try box.store.add("work")
-        let file = box.store.cliDir("work").appendingPathComponent(".claude.json")
-        try box.write(#"{"oauthAccount":{"emailAddress":"w@x.example"},"numStartups":7}"#, to: file)
+        try box.write(#"{"oauthAccount":{"emailAddress":"w@x.example"},"numStartups":7}"#, to: box.cliJSON("work"))
 
-        try box.sharing.set(.connectors, on: true)
-        #expect(box.servers(file) == ["linear", "shared"])
-        #expect(box.store.profile("work").email == "w@x.example")  // not the default account's
-        #expect(box.json(file)?["numStartups"] as? Int == 7)
-        let mode = try FileManager.default.attributesOfItem(atPath: file.path)[.posixPermissions] as? Int
+        try box.sharing.setSource(.connectors, for: "work", to: "default")
+        #expect(box.servers(box.cliJSON("work")) == ["linear", "shared"])
+        #expect(box.store.profile("work").email == "w@x.example")  // not the source's
+        #expect(box.json(box.cliJSON("work"))?["numStartups"] as? Int == 7)
+        let mode = try FileManager.default.attributesOfItem(atPath: box.cliJSON("work").path)[.posixPermissions] as? Int
         #expect(mode == 0o600)
+        #expect(box.read(box.store.paths.defaultCLIJSON) == Self.defaultFile)  // the source is only read
     }
 
-    @Test("The account's own servers are kept; on a clash the default account's wins")
+    @Test("Copied from the chosen account only, not from the default account")
+    func fromChosenAccount() throws {
+        let box = try Sandbox()
+        try box.write(Self.defaultFile, to: box.store.paths.defaultCLIJSON)
+        try box.store.add("work"); try box.store.add("client")
+        try box.write(#"{"mcpServers":{"jira":{"url":"j"}}}"#, to: box.cliJSON("work"))
+        try box.sharing.setSource(.connectors, for: "client", to: "work")
+        #expect(box.servers(box.cliJSON("client")) == ["jira"])
+    }
+
+    @Test("The account's own servers are kept; on a clash the source wins")
     func mergeRules() throws {
         let box = try Sandbox()
         try box.write(Self.defaultFile, to: box.store.paths.defaultCLIJSON)
         try box.store.add("work")
-        let file = box.store.cliDir("work").appendingPathComponent(".claude.json")
-        try box.write(#"{"mcpServers":{"mine":{"url":"mine"},"shared":{"url":"work"}}}"#, to: file)
+        try box.write(#"{"mcpServers":{"mine":{"url":"mine"},"shared":{"url":"work"}}}"#, to: box.cliJSON("work"))
 
-        try box.sharing.set(.connectors, on: true)
-        #expect(box.servers(file) == ["linear", "mine", "shared"])
-        let shared = (box.json(file)?["mcpServers"] as? [String: Any])?["shared"] as? [String: String]
+        try box.sharing.setSource(.connectors, for: "work", to: "default")
+        #expect(box.servers(box.cliJSON("work")) == ["linear", "mine", "shared"])
+        let shared = (box.json(box.cliJSON("work"))?["mcpServers"] as? [String: Any])?["shared"] as? [String: String]
         #expect(shared?["url"] == "default")
     }
 
@@ -204,62 +232,59 @@ struct SharedConnectorsTests {
     func noNeedlessWrites() throws {
         let box = try Sandbox()
         try box.store.add("work")
-        let file = box.store.cliDir("work").appendingPathComponent(".claude.json")
-        try box.sharing.set(.connectors, on: true)
-        #expect(!box.exists(file))  // the default account has no servers
-
+        try box.sharing.setSource(.connectors, for: "work", to: "default")
+        #expect(!box.exists(box.cliJSON("work")))  // the source has no servers
         try box.write(Self.defaultFile, to: box.store.paths.defaultCLIJSON)
-        #expect(try box.sharing.syncConnectors("work"))
-        #expect(try !box.sharing.syncConnectors("work"))
-    }
-
-    @Test("The default account's file is only read")
-    func defaultIsNotChanged() throws {
-        let box = try Sandbox()
-        try box.write(Self.defaultFile, to: box.store.paths.defaultCLIJSON)
-        try box.store.add("work")
-        try box.sharing.set(.connectors, on: true)
-        #expect(box.read(box.store.paths.defaultCLIJSON) == Self.defaultFile)
+        #expect(try box.sharing.syncConnectors("work", from: "default"))
+        #expect(try !box.sharing.syncConnectors("work", from: "default"))
     }
 }
 
 @Suite("Sharing Claude Desktop extensions")
 struct SharedExtensionsTests {
-    func installExtension(_ box: Sandbox, _ id: String, registry: String) throws {
-        try box.write("code", to: box.defaultDesktop.appendingPathComponent("Claude Extensions/\(id)/server.js"))
-        try box.write(#"{"isEnabled":true}"#, to: box.defaultDesktop.appendingPathComponent("Claude Extensions Settings/\(id).json"))
-        try box.write(registry, to: box.defaultDesktop.appendingPathComponent("extensions-installations.json"))
+    func installExtension(_ box: Sandbox, in folder: URL, _ id: String, registry: String) throws {
+        try box.write("code", to: folder.appendingPathComponent("Claude Extensions/\(id)/server.js"))
+        try box.write(#"{"isEnabled":true}"#, to: folder.appendingPathComponent("Claude Extensions Settings/\(id).json"))
+        try box.write(registry, to: folder.appendingPathComponent("extensions-installations.json"))
     }
 
-    @Test("Extensions are copied into an account before its Claude Desktop starts")
+    @Test("Extensions are copied from the chosen account before Claude Desktop starts")
     func copies() throws {
         let box = try Sandbox()
-        try installExtension(box, "ext.one", registry: #"{"extensions":{"ext.one":{}}}"#)
+        try installExtension(box, in: box.defaultDesktop, "ext.one", registry: #"{"extensions":{"ext.one":{}}}"#)
         try box.store.add("work")
-        try box.sharing.set(.extensions, on: true)
+        try box.sharing.setSource(.extensions, for: "work", to: "default")
         let desktop = box.store.desktopDir("work")!
 
         #expect(try box.sharing.prepareDesktop("work"))
         #expect(box.read(desktop.appendingPathComponent("Claude Extensions/ext.one/server.js")) == "code")
-        #expect(box.exists(desktop.appendingPathComponent("Claude Extensions Settings/ext.one.json")))
         #expect(box.linkTarget(desktop.appendingPathComponent("Claude Extensions")) == nil)  // a copy, not a link
         #expect(try !box.sharing.prepareDesktop("work"))  // already up to date
     }
 
-    @Test("A change in the default account is picked up; the default account is never written")
-    func followsDefault() throws {
+    @Test("They can come from an added account too")
+    func fromAddedAccount() throws {
         let box = try Sandbox()
-        try installExtension(box, "ext.one", registry: #"{"extensions":{"ext.one":{}}}"#)
+        try box.store.add("work"); try box.store.add("client")
+        try installExtension(box, in: box.store.desktopDir("work")!, "ext.w", registry: #"{"extensions":{"ext.w":{}}}"#)
+        try box.sharing.setSource(.extensions, for: "client", to: "work")
+        #expect(try box.sharing.prepareDesktop("client"))
+        #expect(box.exists(box.store.desktopDir("client")!.appendingPathComponent("Claude Extensions/ext.w/server.js")))
+    }
+
+    @Test("A change at the source is picked up; the source is never written")
+    func followsSource() throws {
+        let box = try Sandbox()
+        try installExtension(box, in: box.defaultDesktop, "ext.one", registry: #"{"extensions":{"ext.one":{}}}"#)
         try box.store.add("work")
-        try box.sharing.set(.extensions, on: true)
+        try box.sharing.setSource(.extensions, for: "work", to: "default")
         try box.sharing.prepareDesktop("work")
         let desktop = box.store.desktopDir("work")!
         try box.write("changed in work", to: desktop.appendingPathComponent("Claude Extensions/ext.one/server.js"))
 
-        try installExtension(box, "ext.two", registry: #"{"extensions":{"ext.one":{},"ext.two":{}}}"#)
+        try installExtension(box, in: box.defaultDesktop, "ext.two", registry: #"{"extensions":{"ext.one":{},"ext.two":{}}}"#)
         #expect(try box.sharing.prepareDesktop("work"))
         #expect(box.exists(desktop.appendingPathComponent("Claude Extensions/ext.two/server.js")))
-        #expect(box.read(desktop.appendingPathComponent("Claude Extensions/ext.one/server.js")) == "code")
         #expect(box.read(box.defaultDesktop.appendingPathComponent("Claude Extensions/ext.one/server.js")) == "code")
     }
 
@@ -271,21 +296,19 @@ struct SharedExtensionsTests {
         try box.store.add("work")
         let config = box.store.desktopDir("work")!.appendingPathComponent("claude_desktop_config.json")
         try box.write(#"{"preferences":{"theme":"light"}}"#, to: config)
-        try box.sharing.set(.extensions, on: true)
+        try box.sharing.setSource(.extensions, for: "work", to: "default")
 
         #expect(try box.sharing.prepareDesktop("work"))
         #expect(box.servers(config) == ["files"])
         #expect((box.json(config)?["preferences"] as? [String: String])?["theme"] == "light")
     }
 
-    @Test("Nothing happens when the sharing is off, or for the default account")
-    func offOrDefault() throws {
+    @Test("Nothing happens without a source, or for the default account")
+    func noSource() throws {
         let box = try Sandbox()
-        try installExtension(box, "ext.one", registry: #"{"extensions":{"ext.one":{}}}"#)
+        try installExtension(box, in: box.defaultDesktop, "ext.one", registry: #"{"extensions":{"ext.one":{}}}"#)
         try box.store.add("work")
         #expect(try !box.sharing.prepareDesktop("work"))
-        #expect(!box.exists(box.store.desktopDir("work")!.appendingPathComponent("Claude Extensions")))
-        try box.sharing.set(.extensions, on: true)
         #expect(try !box.sharing.prepareDesktop("default"))
     }
 }

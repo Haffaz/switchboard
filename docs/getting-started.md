@@ -90,6 +90,7 @@ Pick an account on the left to:
 - **Give it an icon,** so you can find it by shape in the menu.
 - **See and redo its sign-ins** for Claude Desktop and Claude Code.
 - **Add a Dock icon** that opens that account's Claude Desktop.
+- **Choose what it shares** with other accounts.
 - **Remove it** with **Remove Account…**, or with **−** under the list.
 
 **+** under the list adds an account, the same as **Add Account…** in the menu.
@@ -134,15 +135,17 @@ Each account keeps its own sign-in, chat history, projects and MCP servers.
 
 ### Sharing more
 
-<p align="center"><img src="images/settings-sharing.png" width="560" alt="Settings, Sharing tab: rules, skills, plugins and settings always on; switches for Claude Code history, Claude Code connectors and Desktop extensions"></p>
+<p align="center"><img src="images/settings-sharing.png" width="560" alt="Settings, Sharing tab: a table with one row per account and a menu for History, Connectors and Extensions in each row"></p>
 
-In **Settings → Sharing**, three switches share more between accounts. All are off to begin with.
+In **Settings → Sharing**, pick for each account which other account it shares with:
 
-- **Claude Code History** lets you resume any account's Claude Code sessions from any other account.
-- **Claude Code Connectors** copies the MCP servers you added in Default to the other accounts.
-- **Desktop Extensions** copies the extensions installed in Default's Claude Desktop to the other accounts, each time their Claude Desktop starts.
+- **History:** the two accounts use one set of Claude Code sessions, so either can resume them.
+- **Connectors:** the other account's MCP servers are copied in.
+- **Extensions:** the other account's Claude Desktop extensions are copied in when Claude Desktop starts.
 
-Default is always the source: add a connector or install an extension there. Each switch shows how much there is to share.
+For example, set Client's Connectors to Work, and Client gets every MCP server you add in Work. Leave Personal at "Not shared" and it stays separate.
+
+The same menus are on each account's page in **Settings → Accounts**. Default can be shared from but is never changed.
 
 Conversations in Claude Desktop, and connectors such as Gmail or Slack, belong to one Claude account on Anthropic's servers and cannot be shared. [How it works](how-it-works.md#optional-sharing) has the details.
 

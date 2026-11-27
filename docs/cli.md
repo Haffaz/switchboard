@@ -126,29 +126,33 @@ export CPROF_TERMINAL_APP=iTerm
 
 ### `cprof share`
 
-Lists what accounts share and whether each optional share is on.
+Shows which account each account shares with. `-` means not shared.
 
 ```
 $ cprof share
-always  Rules, agents, skills, plugins and settings
-off     Claude Code History (history): Resume any account's Claude Code sessions from any other account.
-on      Claude Code Connectors (connectors): MCP servers added in Default are copied to the other accounts.
-off     Desktop Extensions (extensions): Extensions installed in Default's Claude Desktop are copied to the other accounts.
+account           history       connectors    extensions
+client            work          work          -
+personal          -             -             -
+work              default       -             default
 ```
 
-### `cprof share <history|connectors|extensions> <on|off>`
+### `cprof share <name> <history|connectors|extensions> <account|off>`
 
-Switches one of them on or off.
+Makes one account share one thing with another, or stops it.
 
 ```bash
-cprof share connectors on
+cprof share client connectors work
 ```
 
-[Optional sharing](how-it-works.md#optional-sharing) explains what each one does to your files.
+```bash
+cprof share client history off
+```
+
+`default` can be named as the account to share with, but never as the one that receives. [Optional sharing](how-it-works.md#optional-sharing) explains what each one does to your files.
 
 ### `cprof sync`
 
-Applies sharing now. Use it after adding a connector in Default, to copy it to the other accounts without waiting. Opening the Switchboard menu or Settings does the same.
+Applies sharing now: copies connectors and puts history links in place. Use it after adding a connector, to copy it without waiting. Opening the Switchboard menu or Settings does the same.
 
 ## Folders and shells
 

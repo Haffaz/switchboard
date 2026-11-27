@@ -107,7 +107,15 @@ enum Actions {
     /// Returns true if the account was removed.
     @discardableResult
     static func remove(_ profile: Profile) async -> Bool {
-        guard !store.isDemo, Dialogs.confirmRemove(profile.displayName) else { return false }
+        guard !store.isDemo else { return false }
+        let sharers = Sharing(store: accounts).historySharers(of: profile.name)
+        if !sharers.isEmpty {
+            let names = sharers.map { store.profile(named: $0)?.displayName ?? $0 }.joined(separator: ", ")
+            Dialogs.info("“\(profile.displayName)” holds shared history",
+                         "\(names) keep their Claude Code sessions in it. Stop sharing their history first.")
+            return false
+        }
+        guard Dialogs.confirmRemove(profile.displayName) else { return false }
         guard await ClaudeDesktop.quit(profile) else {
             Dialogs.error("Quit Claude for “\(profile.displayName)” first.")
             return false
@@ -117,7 +125,8 @@ enum Actions {
         let signedOut = await Task.detached {
             !profile.codeSignedIn || ClaudeCode.signOut(configDir: accounts.cliDir(profile.name))
         }.value
-        guard await perform({ try accounts.remove(profile.name) }) else { return false }
+        let name = profile.name
+        guard await perform({ try accounts.remove(name); try Sharing(store: accounts).forget(name) }) else { return false }
         // Say something only if a step did not work.
         if !signedOut {
             Dialogs.info("Removed, but still signed in to Claude Code",
@@ -128,18 +137,21 @@ enum Actions {
 
     // MARK: - Sharing
 
-    /// Returns true if the switch changed.
+    /// Make `profile` share `thing` with `source`, or stop (nil). Returns
+    /// true if it changed.
     @discardableResult
-    static func setSharing(_ thing: SharedThing, on: Bool) async -> Bool {
+    static func setSharing(_ thing: SharedThing, for profile: Profile, from source: Profile?) async -> Bool {
         // History is the one that moves files, so it is the one that asks.
-        if on, thing == .history,
-           !Dialogs.confirm("Share Claude Code history?", "Every account's sessions go into one folder.", button: "Share") {
+        if thing == .history, let source,
+           !Dialogs.confirm("Share Claude Code history between “\(profile.displayName)” and “\(source.displayName)”?",
+                            "Their sessions go into one folder, so either can resume them.", button: "Share") {
             return false
         }
-        let accounts = accounts
+        let accounts = accounts, target = profile.name, from = source?.name
         let notes = Box<[String]>([])
-        guard await perform({ notes.value = try Sharing(store: accounts).set(thing, on: on) }) else { return false }
-        Log.write("sharing: \(thing.rawValue) \(on ? "on" : "off")")
+        guard await perform({ notes.value = try Sharing(store: accounts).setSource(thing, for: target, to: from) })
+        else { return false }
+        Log.write("sharing: \(target) \(thing.rawValue) \(from.map { "from \($0)" } ?? "off")")
         if !notes.value.isEmpty { Dialogs.info("Some history was kept aside", notes.value.joined(separator: "\n")) }
         return true
     }

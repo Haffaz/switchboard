@@ -7,7 +7,7 @@ import SwitchboardCore
 @MainActor
 final class SettingsWindow: NSObject, NSWindowDelegate {
     static let shared = SettingsWindow()
-    static let size = NSSize(width: 640, height: 470)
+    static let size = NSSize(width: 660, height: 600)
 
     let model = SettingsModel()
     private(set) var window: NSWindow?
@@ -140,6 +140,29 @@ private struct AccountDetail: View {
                 }
             }
             Section {
+                if profile.isDefault {
+                    let shared = model.sharesFrom(profile)
+                    if shared.isEmpty {
+                        Text("No account shares from this one yet.").foregroundStyle(.secondary)
+                    } else {
+                        ForEach(shared, id: \.thing) { entry in
+                            LabeledContent(entry.thing.title) {
+                                Text(entry.accounts.map(\.displayName).joined(separator: ", ")).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                } else {
+                    ForEach(SharedThing.allCases, id: \.self) { thing in
+                        LabeledContent(thing.title) {
+                            SourcePicker(model: model, profile: profile, thing: thing).frame(width: 150)
+                        }
+                        .help(thing.summary)
+                    }
+                }
+            } header: {
+                Text(profile.isDefault ? "Shared from this account" : "Share with")
+            }
+            Section {
                 HStack {
                     if !profile.isDefault { Button("Add Dock Icon") { model.makeDockApp(profile) } }
                     Button("Show Files") { model.reveal(profile) }
@@ -191,33 +214,65 @@ private struct SharingPane: View {
     var body: some View {
         Form {
             Section {
-                LabeledContent {
-                    Text("Always on").foregroundStyle(.secondary)
-                } label: {
-                    row("Rules, skills, plugins and settings", "Kept in one place and used by every account.", nil)
-                }
-                ForEach(SharedThing.allCases, id: \.self) { thing in
-                    Toggle(isOn: Binding(get: { model.sharingOn.contains(thing) },
-                                         set: { model.setSharing(thing, on: $0) })) {
-                        row(thing.title, thing.summary(source: model.sourceName), model.sharingStatus[thing])
+                if model.sharingAccounts.isEmpty {
+                    Text("Add a second account to share between accounts.").foregroundStyle(.secondary)
+                } else {
+                    Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 10) {
+                        GridRow {
+                            Text("Account")
+                            ForEach(SharedThing.allCases, id: \.self) { thing in
+                                Text(thing.shortTitle).help(thing.summary)
+                            }
+                        }
+                        .font(.callout.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        Divider().gridCellUnsizedAxes(.horizontal)
+                        ForEach(model.sharingAccounts, id: \.name) { profile in
+                            GridRow {
+                                Label(profile.displayName, systemImage: profile.iconSymbol)
+                                    .lineLimit(1)
+                                    .frame(minWidth: 120, alignment: .leading)
+                                ForEach(SharedThing.allCases, id: \.self) { thing in
+                                    SourcePicker(model: model, profile: profile, thing: thing).fixedSize()
+                                }
+                            }
+                        }
                     }
+                    .padding(.vertical, 4)
                 }
             } header: {
-                Text("Shared from \(model.sourceName)")
+                Text("Share with another account")
             } footer: {
-                Note("Conversations in Claude Desktop, and connectors such as Gmail or Slack, belong to one Claude account and cannot be shared.")
+                VStack(alignment: .leading, spacing: 6) {
+                    Note("History: the two accounts use one set of Claude Code sessions. Connectors and extensions: copied from the account you pick. Default can be shared from, but is never changed.")
+                    Note("Rules, skills, plugins and settings are always shared by every account. Conversations in Claude Desktop, and connectors such as Gmail or Slack, belong to one Claude account and cannot be shared.")
+                }
             }
         }
         .formStyle(.grouped)
     }
+}
 
-    private func row(_ title: String, _ detail: String, _ status: String?) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-            Text(detail).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            if let status, !status.isEmpty { Text(status).font(.caption).foregroundStyle(.tertiary) }
+/// "Not shared", or one of the other accounts. Used in the table and on
+/// each account's page.
+private struct SourcePicker: View {
+    @ObservedObject var model: SettingsModel
+    let profile: Profile
+    let thing: SharedThing
+
+    var body: some View {
+        Picker(thing.shortTitle, selection: Binding(
+            get: { model.source(thing, for: profile)?.name ?? "" },
+            set: { name in model.setSource(thing, for: profile, to: model.profiles.first { $0.name == name }) })) {
+            Text("Not shared").tag("")
+            Divider()
+            ForEach(model.choices(thing, for: profile), id: \.name) { choice in
+                Text(choice.displayName).tag(choice.name)
+            }
         }
-        .padding(.vertical, 2)
+        .labelsHidden()
+        .pickerStyle(.menu)
+        .accessibilityLabel("\(thing.title) for \(profile.displayName)")
     }
 }
 

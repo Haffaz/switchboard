@@ -9,7 +9,7 @@ A menu bar app for Claude Desktop and Claude Code.</p>
   <img src="docs/images/menu.png" width="320" alt="The Switchboard menu: four accounts, two with a green dot because their Claude Desktop is running, then Add Account, Settings and Quit">
 </p>
 <p align="center">
-  <img src="docs/images/settings-sharing.png" width="560" alt="Switchboard Settings, Sharing tab: switches for Claude Code history, Claude Code connectors and Desktop extensions">
+  <img src="docs/images/settings-sharing.png" width="560" alt="Switchboard Settings, Sharing tab: for each account, which other account it shares history, connectors and extensions with">
 </p>
 
 ## Why
@@ -23,7 +23,7 @@ Switchboard gives each account its own Claude Desktop window and its own Claude 
 - **Every account, one click away.** Open any account's Claude Desktop or Claude Code from the menu. A green dot shows which are running.
 - **Truly side by side.** Each account has its own sign-in, chats and projects. Nothing is signed out to make room.
 - **One shared setup.** Your `CLAUDE.md`, rules, agents, skills, hooks and settings apply to every account, from one place.
-- **Share more if you want.** Switches in Settings share Claude Code sessions, MCP servers and Desktop extensions between accounts.
+- **Share between the accounts you choose.** Pick which account shares Claude Code sessions, MCP servers or Desktop extensions with which.
 - **Per-project accounts.** Pin a folder to an account, and `claude` uses it there.
 - **A command-line twin.** `cprof` does everything the menu does, for scripts and terminals.
 - **Leaves your setup alone.** Your current Claude becomes the "Default" account. Switchboard never moves or changes it.

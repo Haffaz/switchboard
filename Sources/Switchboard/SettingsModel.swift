@@ -11,23 +11,50 @@ final class SettingsModel: ObservableObject {
     @Published var selected: String = Profile.defaultName
     @Published private(set) var profiles: [Profile] = []
     @Published private(set) var running: Set<String> = []
-    @Published private(set) var sharingOn: Set<SharedThing> = []
-    @Published private(set) var sharingStatus: [SharedThing: String] = [:]
+    /// account -> thing -> the account it shares with
+    @Published private(set) var sources: [String: [SharedThing: String]] = [:]
     @Published private(set) var opensAtLogin = false
     @Published private(set) var commandLineToolInstalled = false
 
     private let store = ProfileStore.shared
 
     var selectedProfile: Profile? { profiles.first { $0.name == selected } ?? profiles.first }
-    /// What the default account is called, for "Shared from …".
-    var sourceName: String { profiles.first { $0.isDefault }?.displayName ?? "Default" }
+    /// The accounts that can be given a source: all but the default one.
+    var sharingAccounts: [Profile] { profiles.filter { !$0.isDefault } }
+
+    func source(_ thing: SharedThing, for profile: Profile) -> Profile? {
+        sources[profile.name]?[thing].flatMap { name in profiles.first { $0.name == name } }
+    }
+
+    /// Accounts `profile` may share `thing` with: every other account, except
+    /// any that would make history go round in a loop.
+    func choices(_ thing: SharedThing, for profile: Profile) -> [Profile] {
+        profiles.filter { candidate in
+            guard candidate.name != profile.name else { return false }
+            guard thing == .history else { return true }
+            return root(of: candidate.name) != profile.name
+        }
+    }
+
+    /// Accounts that take something from `profile`, for its own page.
+    func sharesFrom(_ profile: Profile) -> [(thing: SharedThing, accounts: [Profile])] {
+        SharedThing.allCases.compactMap { thing in
+            let takers = profiles.filter { sources[$0.name]?[thing] == profile.name }
+            return takers.isEmpty ? nil : (thing, takers)
+        }
+    }
+
+    private func root(of name: String) -> String {
+        var current = name, seen: Set<String> = [name]
+        while let next = sources[current]?[.history], !seen.contains(next) { seen.insert(next); current = next }
+        return current
+    }
 
     /// Sample values for the documentation screenshots.
-    func loadDemo(sharingOn: Set<SharedThing>, status: [SharedThing: String]) {
+    func loadDemo(sources: [String: [SharedThing: String]]) {
         profiles = store.profiles
         running = store.runningNames()
-        self.sharingOn = sharingOn
-        sharingStatus = status
+        self.sources = sources
         opensAtLogin = true
         commandLineToolInstalled = true
     }
@@ -40,11 +67,7 @@ final class SettingsModel: ObservableObject {
         running = store.runningNames()
         if !profiles.contains(where: { $0.name == selected }) { selected = Profile.defaultName }
         let sharing = Sharing(store: Actions.accounts)
-        let (on, status) = await Task.detached {
-            (sharing.enabled(), Dictionary(uniqueKeysWithValues: SharedThing.allCases.map { ($0, sharing.statusLine($0)) }))
-        }.value
-        sharingOn = on
-        sharingStatus = status
+        sources = await Task.detached { sharing.sources() }.value
         opensAtLogin = Actions.opensAtLogin
         commandLineToolInstalled = Actions.commandLineToolInstalled
     }
@@ -58,7 +81,9 @@ final class SettingsModel: ObservableObject {
     func makeDockApp(_ profile: Profile) { run { await Actions.makeDockApp(profile) } }
     func reveal(_ profile: Profile) { Actions.reveal(profile) }
     func remove(_ profile: Profile) { run { await Actions.remove(profile) } }
-    func setSharing(_ thing: SharedThing, on: Bool) { run { await Actions.setSharing(thing, on: on) } }
+    func setSource(_ thing: SharedThing, for profile: Profile, to source: Profile?) {
+        run { await Actions.setSharing(thing, for: profile, from: source) }
+    }
     func installCommandLineTool() { run { await Actions.installCommandLineTool() } }
 
     func addAccount() {

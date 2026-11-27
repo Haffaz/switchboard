@@ -24,7 +24,9 @@ struct CLI {
           login [name]           Open a Terminal window that signs Claude Code in
           terminal [name]        Open a Terminal window set to an account
 
-          share [thing on|off]   Show or change what accounts share: history, connectors, extensions
+          share                  Show who shares what with whom
+          share <name> <thing> <from|off>
+                                 Share history, connectors or extensions from another account
           sync                   Apply sharing now (copy connectors, link history)
 
           use <name>             Pin this folder to an account (writes .claude-profile)
@@ -140,8 +142,14 @@ struct CLI {
         guard ClaudeDesktop.running(profile) == nil else {
             throw SwitchboardError("quit Claude Desktop for '\(name)' first")
         }
+        let sharers = Sharing(store: store).historySharers(of: name)
+        guard sharers.isEmpty else {
+            throw SwitchboardError("Claude Code history for \(sharers.joined(separator: ", ")) lives in '\(name)'; "
+                                   + "stop sharing it first (cprof share <name> history off)")
+        }
         let signedOut = !profile.codeSignedIn || ClaudeCode.signOut(configDir: store.cliDir(name))
         try store.remove(name)
+        try Sharing(store: store).forget(name)
         print("Deleted \(name).")
         if !signedOut { print(Self.signOutFailedNote) }
     }
@@ -189,25 +197,33 @@ struct CLI {
         throw SwitchboardError("could not start \(claude.path): \(String(cString: strerror(errno)))")
     }
 
-    /// `cprof share` lists what is shared; `cprof share history on` changes it.
+    /// `cprof share` shows a table; `cprof share work history default` changes it.
     private func share(_ args: [String]) throws {
         let sharing = Sharing(store: store)
-        guard let first = args.first else {
-            print("always  Rules, agents, skills, plugins and settings")
-            for thing in SharedThing.allCases {
-                print("\(sharing.isOn(thing) ? "on    " : "off   ")  \(thing.title) (\(thing.rawValue)): \(thing.summary)")
+        guard !args.isEmpty else {
+            let sources = sharing.sources()
+            let things = SharedThing.allCases
+            let head = "account".padding(toLength: 18, withPad: " ", startingAt: 0)
+                + things.map { $0.rawValue.padding(toLength: 14, withPad: " ", startingAt: 0) }.joined()
+            print(head.trimmingCharacters(in: .whitespaces))
+            for name in store.names() where name != Profile.defaultName {
+                let cells = things.map { (sources[name]?[$0] ?? "-").padding(toLength: 14, withPad: " ", startingAt: 0) }
+                print((name.padding(toLength: 18, withPad: " ", startingAt: 0) + cells.joined())
+                    .trimmingCharacters(in: .whitespaces))
             }
+            print("\nRules, agents, skills, plugins and settings are always shared.")
             return
         }
-        guard let thing = SharedThing(rawValue: first), args.count == 2, args[1] == "on" || args[1] == "off" else {
-            let names = SharedThing.allCases.map(\.rawValue).joined(separator: "|")
-            throw SwitchboardError("usage: cprof share [\(names) on|off]")
+        let names = SharedThing.allCases.map(\.rawValue).joined(separator: "|")
+        guard args.count == 3, let thing = SharedThing(rawValue: args[1]) else {
+            throw SwitchboardError("usage: cprof share <name> <\(names)> <from-account|off>")
         }
-        let notes = try sharing.set(thing, on: args[1] == "on")
-        print("\(thing.title): \(args[1])")
+        let source = args[2] == "off" ? nil : args[2]
+        let notes = try sharing.setSource(thing, for: args[0], to: source)
+        print(source.map { "\(args[0]) now shares \(thing.rawValue) with \($0)." } ?? "\(args[0]) no longer shares \(thing.rawValue).")
         notes.forEach { print("note: \($0)") }
-        if thing == .extensions, args[1] == "on" {
-            print("Extensions are copied the next time each account's Claude Desktop starts.")
+        if thing == .extensions, source != nil {
+            print("Extensions are copied the next time \(args[0])'s Claude Desktop starts.")
         }
     }
 

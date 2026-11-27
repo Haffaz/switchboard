@@ -75,9 +75,9 @@ enum Demo {
             .flatMap { $0.split(separator: "\n").first { $0.hasPrefix("VERSION=") } }
             .map { $0.dropFirst("VERSION=".count).trimmingCharacters(in: CharacterSet(charactersIn: "\"")) }
         let settings = SettingsWindow.shared
-        settings.model.loadDemo(sharingOn: [.connectors], status: [
-            .history: "", .connectors: "3 MCP servers in the default account",
-            .extensions: "4 extensions in the default account",
+        settings.model.loadDemo(sources: [
+            "work": [.history: "default", .extensions: "default"],
+            "client-acme": [.connectors: "work", .extensions: "work"],
         ])
         settings.model.selected = "work"
         for tab in SettingsModel.Tab.allCases {
