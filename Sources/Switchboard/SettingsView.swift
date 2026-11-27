@@ -201,7 +201,7 @@ private struct SharingSection: View {
         let mode = model.sharingMode(profile)
         Section {
             ChoiceRow(title: "Share with \(main)",
-                      detail: "Your main account's Claude Code conversations, connectors and extensions.",
+                      detail: "Your main account's Claude Code conversations, connectors and extensions. Claude Desktop chats stay with each account.",
                       selected: mode == .same) { model.setSharingMode(profile, .same) }
             ChoiceRow(title: "Keep separate",
                       detail: "Its own conversations, connectors and extensions.",
@@ -237,7 +237,7 @@ private struct SharingSection: View {
 
     static func how(_ thing: SharedThing) -> String {
         switch thing {
-        case .history: "Shared, the same in both"
+        case .history: "Also in Desktop's Code tab (beta)"
         case .connectors: "MCP servers, copied in"
         case .extensions: "Copied in when it opens"
         }

@@ -30,7 +30,7 @@ public enum SharedThing: String, CaseIterable, Codable, Sendable {
     /// What choosing a source does, in a sentence.
     public var summary: String {
         switch self {
-        case .history: return "Both accounts use one set of Claude Code sessions, so either can resume them."
+        case .history: return "Both accounts use one set of Claude Code sessions, in the terminal and in Claude Desktop's Code tab (experimental). Claude Desktop chats are not shared."
         case .connectors: return "The other account's MCP servers are copied in."
         case .extensions: return "The other account's Desktop extensions are copied in when Claude Desktop starts."
         }
@@ -327,15 +327,24 @@ public struct Sharing: Sendable {
 
     // MARK: - Claude Desktop extensions
 
-    /// Bring an account's Claude Desktop extensions in line with its source
-    /// account's, if it has one. Call this just before the account's Claude
-    /// Desktop starts, never while it is running. Returns true if anything
-    /// was copied.
-    @discardableResult
+    /// Get an account's Claude Desktop ready to start: copy in its source
+    /// account's extensions, and, when it shares Claude Code history, the
+    /// main account's Code tab list. Call this just before the account's
+    /// Claude Desktop starts, never while it is running. Returns true if
+    /// anything was copied.
     public func prepareDesktop(_ name: String) throws -> Bool {
-        guard name != Profile.defaultName, let source = self.source(.extensions, for: name),
-              let target = store.desktopDir(name) else { return false }
-        let from = desktopData(source)
+        guard name != Profile.defaultName, let target = store.desktopDir(name) else { return false }
+        var changed = false
+        if let source = self.source(.extensions, for: name) {
+            changed = try copyExtensions(from: desktopData(source), to: target) || changed
+        }
+        if self.source(.history, for: name) != nil {
+            changed = try copyCodeSessions(from: desktopData(historyRoot(of: name)), to: target) || changed
+        }
+        return changed
+    }
+
+    private func copyExtensions(from: URL, to target: URL) throws -> Bool {
         try fm.createDirectory(at: target, withIntermediateDirectories: true)
         var changed = try mergeServers(from: from.appendingPathComponent(Self.desktopConfig),
                                        into: target.appendingPathComponent(Self.desktopConfig))
@@ -356,6 +365,62 @@ public struct Sharing: Sendable {
             changed = true
         }
         return changed
+    }
+
+    // MARK: - Claude Desktop's Code tab list (experimental)
+
+    /// Claude Desktop lists Code sessions from its own folder, one small
+    /// "local_<id>.json" entry per session, filed under the signed-in
+    /// account: claude-code-sessions/<account id>/<organisation id>/. The
+    /// conversations themselves are in the shared history, so copying the
+    /// entries makes them show up. Experimental: this is Claude Desktop's
+    /// own, undocumented layout. Entries are only ever added or refreshed,
+    /// the newer copy wins, and sessions deleted on either side stay deleted.
+    private func copyCodeSessions(from source: URL, to target: URL) throws -> Bool {
+        guard let destination = Self.listFolders(in: target.appendingPathComponent(Self.codeSessions), fm)
+            .max(by: { Self.modified($0, fm) < Self.modified($1, fm) }) else { return false }  // Code tab never opened
+        let deletedHere = Self.deletedIDs(in: destination, fm)
+        var changed = false
+        for folder in Self.listFolders(in: source.appendingPathComponent(Self.codeSessions), fm) {
+            let deletedThere = Self.deletedIDs(in: folder, fm)
+            for entry in (try? fm.contentsOfDirectory(atPath: folder.path)) ?? [] {
+                guard let id = Self.sessionID(entry), !deletedThere.contains(id), !deletedHere.contains(id) else { continue }
+                let from = folder.appendingPathComponent(entry), to = destination.appendingPathComponent(entry)
+                if fm.fileExists(atPath: to.path), Self.modified(to, fm) >= Self.modified(from, fm) { continue }
+                try? fm.removeItem(at: to)
+                try fm.copyItem(at: from, to: to)  // keeps the date, so an unchanged entry is not copied again
+                changed = true
+            }
+        }
+        return changed
+    }
+
+    static let codeSessions = "claude-code-sessions"
+
+    /// "local_<id>.json" -> "<id>"; nil for anything else in the folder.
+    static func sessionID(_ entry: String) -> String? {
+        guard entry.hasPrefix("local_"), entry.hasSuffix(".json") else { return nil }
+        return String(entry.dropFirst("local_".count).dropLast(".json".count))
+    }
+
+    private static func deletedIDs(in folder: URL, _ fm: FileManager) -> Set<String> {
+        Set(((try? fm.contentsOfDirectory(atPath: folder.path)) ?? [])
+            .filter { $0.hasPrefix("deleted_") }.map { String($0.dropFirst("deleted_".count)) })
+    }
+
+    /// The <account id>/<organisation id> folders under a Code session list.
+    private static func listFolders(in root: URL, _ fm: FileManager) -> [URL] {
+        func folders(_ url: URL) -> [URL] {
+            ((try? fm.contentsOfDirectory(atPath: url.path)) ?? []).map { url.appendingPathComponent($0) }.filter {
+                var isFolder: ObjCBool = false
+                return fm.fileExists(atPath: $0.path, isDirectory: &isFolder) && isFolder.boolValue
+            }
+        }
+        return folders(root).flatMap(folders)
+    }
+
+    private static func modified(_ url: URL, _ fm: FileManager) -> Date {
+        ((try? fm.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date) ?? .distantPast
     }
 
     // MARK: - Helpers

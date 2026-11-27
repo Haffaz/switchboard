@@ -141,7 +141,7 @@ Each extra account's page has one **Sharing** choice. Say your main account is c
 - **Keep separate:** the account keeps its own.
 - **Choose for each:** pick an account for each of the three: Claude Code conversations, connectors, and Claude Desktop extensions.
 
-History stays in sync: both accounts use the same sessions, so a change in one shows in the other. Connectors and extensions are copied one way, from the account you chose.
+History stays in sync: both accounts use the same sessions, so a change in one shows in the other. That covers Claude Code in the terminal and, as an experiment, the Code tab in Claude Desktop, which picks up the main account's sessions each time it opens. Chats in Claude Desktop stay with the account they belong to. Connectors and extensions are copied one way, from the account you chose.
 
 Work itself can be shared from but is never changed. Its page lists which accounts use it.
 

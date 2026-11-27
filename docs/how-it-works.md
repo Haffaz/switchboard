@@ -42,13 +42,26 @@ Each account's page in **Settings → Accounts** has one **Sharing** choice:
 
 From the terminal, use `cprof share`, or create an account with `cprof add <name> --separate`.
 
+### Claude Desktop's Code tab (experimental)
+
+Claude Desktop keeps its own list of Code sessions, filed under the Claude account that is signed in. The sessions themselves are in the shared history, but the list is not, so without help Client's Code tab would not show Work's sessions.
+
+When Client shares history, Switchboard copies the history account's list entries into Client's list each time Client's Claude Desktop starts:
+
+- Only entries are copied. Work's own files are never changed.
+- If both sides have an entry, the newer one is kept.
+- A session deleted on either side is not brought back.
+- Client must have opened its Code tab once, so that its list exists.
+
+This relies on how Claude Desktop stores its list, which is not documented and may change with a Claude update. If something looks wrong, set Client to **Keep separate**, or remove the copied `local_*.json` files from `~/.claude-profiles/client/desktop/claude-code-sessions`.
+
 ### Does it stay in sync?
 
 Only history. The two accounts use the same files, so a session changed in one is changed in the other at once. Connectors and extensions are copies, made one way, from the account you picked: something added there arrives later, and something added in the receiving account stays there.
 
 | Thing | When Client takes it from Work | How |
 |---|---|---|
-| **Claude Code History** | Client and Work use one set of sessions. `claude --resume` in either lists both accounts' sessions, with per-project memory and the saved file versions used to rewind. | Client's history folders become links to Work's. |
+| **Claude Code History** | Client and Work use one set of sessions. `claude --resume` in either lists both accounts' sessions, with per-project memory and the saved file versions used to rewind. Client's Claude Desktop also lists Work's sessions in its Code tab (experimental, see below). | Client's history folders become links to Work's. |
 | **Claude Code Connectors** | Work's MCP servers (those added with `claude mcp add --scope user`) are copied into Client. | Copied into Client's settings file, every time you open the menu or Settings. |
 | **Desktop Extensions** | Work's Claude Desktop extensions and local MCP servers are copied into Client's Claude Desktop. | Copied each time Client's Claude Desktop starts, never while it runs. |
 

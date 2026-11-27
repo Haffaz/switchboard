@@ -277,6 +277,83 @@ struct SharedConnectorsTests {
     }
 }
 
+@Suite("Claude Desktop's Code tab list (experimental)")
+struct SharedCodeTabTests {
+    /// claude-code-sessions/<account id>/<organisation id>/, as Claude Desktop lays it out.
+    func list(_ desktop: URL, _ account: String) -> URL {
+        desktop.appendingPathComponent("claude-code-sessions/\(account)/org-\(account)")
+    }
+
+    func session(_ box: Sandbox, in folder: URL, _ id: String, _ title: String, age: TimeInterval = 0) throws {
+        let file = folder.appendingPathComponent("local_\(id).json")
+        try box.write(#"{"title":"\#(title)"}"#, to: file)
+        try FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(-age)], ofItemAtPath: file.path)
+    }
+
+    /// An account that shares history with the main account and has opened its Code tab once.
+    func setUp() throws -> (box: Sandbox, mine: URL, main: URL) {
+        let box = try Sandbox()
+        try box.store.add("personal")
+        try box.sharing.setSource(.history, for: "personal", to: "default")
+        let mine = list(box.store.desktopDir("personal")!, "acct-personal")
+        try FileManager.default.createDirectory(at: mine, withIntermediateDirectories: true)
+        return (box, mine, list(box.defaultDesktop, "acct-main"))
+    }
+
+    @Test("The main account's Code sessions are listed in the account's own Code tab")
+    func copies() throws {
+        let (box, mine, main) = try setUp()
+        try session(box, in: main, "a", "Fix login bug")
+        try box.write("", to: main.appendingPathComponent("archived-sessions.idx"))
+
+        #expect(try box.sharing.prepareDesktop("personal"))
+        #expect(box.read(mine.appendingPathComponent("local_a.json")) == #"{"title":"Fix login bug"}"#)
+        #expect(!box.exists(mine.appendingPathComponent("archived-sessions.idx")))  // only session entries
+        #expect(try !box.sharing.prepareDesktop("personal"))  // already up to date
+        #expect(box.read(main.appendingPathComponent("local_a.json")) == #"{"title":"Fix login bug"}"#)
+    }
+
+    @Test("Deleted sessions are not brought back, on either side")
+    func deleted() throws {
+        let (box, mine, main) = try setUp()
+        try session(box, in: main, "gone", "Old")
+        try box.write("", to: main.appendingPathComponent("deleted_gone"))
+        try session(box, in: main, "mine-deleted", "Removed here")
+        try box.write("", to: mine.appendingPathComponent("deleted_mine-deleted"))
+
+        try box.sharing.prepareDesktop("personal")
+        #expect(!box.exists(mine.appendingPathComponent("local_gone.json")))
+        #expect(!box.exists(mine.appendingPathComponent("local_mine-deleted.json")))
+    }
+
+    @Test("The newer copy of an entry wins")
+    func newerWins() throws {
+        let (box, mine, main) = try setUp()
+        try session(box, in: main, "a", "From main", age: 60)
+        try session(box, in: mine, "a", "Continued here", age: 0)
+        try session(box, in: main, "b", "Updated in main", age: 0)
+        try session(box, in: mine, "b", "Stale here", age: 60)
+
+        try box.sharing.prepareDesktop("personal")
+        #expect(box.read(mine.appendingPathComponent("local_a.json")) == #"{"title":"Continued here"}"#)
+        #expect(box.read(mine.appendingPathComponent("local_b.json")) == #"{"title":"Updated in main"}"#)
+    }
+
+    @Test("Nothing happens until the account has opened its Code tab, or without shared history")
+    func needsListAndHistory() throws {
+        let box = try Sandbox()
+        try box.store.add("personal"); try box.store.add("solo")
+        try session(box, in: list(box.defaultDesktop, "acct-main"), "a", "Fix login bug")
+        try box.sharing.setSource(.history, for: "personal", to: "default")
+        #expect(try !box.sharing.prepareDesktop("personal"))  // no list folder of its own yet
+
+        let soloList = list(box.store.desktopDir("solo")!, "acct-solo")
+        try FileManager.default.createDirectory(at: soloList, withIntermediateDirectories: true)
+        #expect(try !box.sharing.prepareDesktop("solo"))  // history not shared
+        #expect(!box.exists(soloList.appendingPathComponent("local_a.json")))
+    }
+}
+
 @Suite("Sharing Claude Desktop extensions")
 struct SharedExtensionsTests {
     func installExtension(_ box: Sandbox, in folder: URL, _ id: String, registry: String) throws {

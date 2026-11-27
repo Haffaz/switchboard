@@ -62,6 +62,12 @@ History can chain from one account to the next, but not back round to where it s
 
 Another account keeps its Claude Code sessions in this one, so removing it would delete them. On that account's page in Settings, set Sharing to **Keep separate** first.
 
+### Shared sessions are missing from Claude Desktop's Code tab
+
+Claude Desktop reads its Code tab list once, when it starts. Quit that account's Claude Desktop from the Switchboard menu and open it again. The account also needs to have opened its Code tab once before; if it never has, open it, then quit and reopen.
+
+Chats in Claude Desktop (not the Code tab) are never shared. They belong to one Claude account.
+
 ### Sessions are missing after I started sharing history
 
 Look in the account's folder, `~/.claude-profiles/<name>/cli`, for a folder ending `.before-sharing`. Switchboard puts sessions there when the same file existed in both places, so that nothing is overwritten.

@@ -31,13 +31,13 @@ public enum ClaudeDesktop {
             throw SwitchboardError("Claude Desktop is not installed. Get it from claude.ai/download.")
         }
         // The account's Claude is not running, so this is the safe moment to
-        // bring its shared extensions up to date.
+        // bring its shared extensions and Code tab list up to date.
         let name = profile.name
         let copied = await Task.detached { Result { try Sharing().prepareDesktop(name) } }.value
         switch copied {
-        case .success(true): Log.write("sharing: copied Desktop extensions to \(name)")
+        case .success(true): Log.write("sharing: copied shared Desktop items to \(name)")
         case .success(false): break
-        case .failure(let error): Log.write("sharing: could not copy extensions to \(name): \(error.localizedDescription)")
+        case .failure(let error): Log.write("sharing: could not copy shared Desktop items to \(name): \(error.localizedDescription)")
         }
         let config = NSWorkspace.OpenConfiguration()
         config.createsNewApplicationInstance = true  // never reuse another account's copy
