@@ -339,6 +339,22 @@ struct SharedCodeTabTests {
         #expect(box.read(mine.appendingPathComponent("local_b.json")) == #"{"title":"Updated in main"}"#)
     }
 
+    @Test("Sessions waiting for a restart are counted: new ones only, and none once copied")
+    func pending() throws {
+        let (box, mine, main) = try setUp()
+        #expect(box.sharing.pendingCodeSessions("personal") == 0)
+        try session(box, in: main, "a", "Fix login bug", age: 0)
+        try session(box, in: main, "b", "Already here", age: 0)
+        try session(box, in: mine, "b", "Already here", age: 60)  // an update, not a new session
+        try session(box, in: main, "gone", "Deleted")
+        try box.write("", to: main.appendingPathComponent("deleted_gone"))
+        #expect(box.sharing.pendingCodeSessions("personal") == 1)
+
+        try box.sharing.prepareDesktop("personal")
+        #expect(box.sharing.pendingCodeSessions("personal") == 0)
+        #expect(box.sharing.pendingCodeSessions("default") == 0)
+    }
+
     @Test("Nothing happens until the account has opened its Code tab, or without shared history")
     func needsListAndHistory() throws {
         let box = try Sandbox()

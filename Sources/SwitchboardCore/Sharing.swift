@@ -377,22 +377,39 @@ public struct Sharing: Sendable {
     /// own, undocumented layout. Entries are only ever added or refreshed,
     /// the newer copy wins, and sessions deleted on either side stay deleted.
     private func copyCodeSessions(from source: URL, to target: URL) throws -> Bool {
+        let entries = codeSessionEntries(from: source, to: target).filter(\.needed)
+        for entry in entries {
+            try? fm.removeItem(at: entry.to)
+            try fm.copyItem(at: entry.from, to: entry.to)  // keeps the date, so an unchanged entry is not copied again
+        }
+        return !entries.isEmpty
+    }
+
+    /// How many sessions the account's Code tab will gain the next time its
+    /// Claude Desktop starts. Only new sessions count, not updated ones.
+    /// Reads file names and dates only.
+    public func pendingCodeSessions(_ name: String) -> Int {
+        guard name != Profile.defaultName, self.source(.history, for: name) != nil,
+              let target = store.desktopDir(name) else { return 0 }
+        return codeSessionEntries(from: desktopData(historyRoot(of: name)), to: target)
+            .filter { $0.needed && !fm.fileExists(atPath: $0.to.path) }.count
+    }
+
+    /// Every session entry in the source list, where it would go in the
+    /// account's own list, and whether it needs copying there.
+    private func codeSessionEntries(from source: URL, to target: URL) -> [(from: URL, to: URL, needed: Bool)] {
         guard let destination = Self.listFolders(in: target.appendingPathComponent(Self.codeSessions), fm)
-            .max(by: { Self.modified($0, fm) < Self.modified($1, fm) }) else { return false }  // Code tab never opened
+            .max(by: { Self.modified($0, fm) < Self.modified($1, fm) }) else { return [] }  // Code tab never opened
         let deletedHere = Self.deletedIDs(in: destination, fm)
-        var changed = false
-        for folder in Self.listFolders(in: source.appendingPathComponent(Self.codeSessions), fm) {
+        return Self.listFolders(in: source.appendingPathComponent(Self.codeSessions), fm).flatMap { folder in
             let deletedThere = Self.deletedIDs(in: folder, fm)
-            for entry in (try? fm.contentsOfDirectory(atPath: folder.path)) ?? [] {
-                guard let id = Self.sessionID(entry), !deletedThere.contains(id), !deletedHere.contains(id) else { continue }
+            return ((try? fm.contentsOfDirectory(atPath: folder.path)) ?? []).compactMap { entry -> (from: URL, to: URL, needed: Bool)? in
+                guard let id = Self.sessionID(entry), !deletedThere.contains(id), !deletedHere.contains(id) else { return nil }
                 let from = folder.appendingPathComponent(entry), to = destination.appendingPathComponent(entry)
-                if fm.fileExists(atPath: to.path), Self.modified(to, fm) >= Self.modified(from, fm) { continue }
-                try? fm.removeItem(at: to)
-                try fm.copyItem(at: from, to: to)  // keeps the date, so an unchanged entry is not copied again
-                changed = true
+                let needed = !fm.fileExists(atPath: to.path) || Self.modified(to, fm) < Self.modified(from, fm)
+                return (from, to, needed)
             }
         }
-        return changed
     }
 
     static let codeSessions = "claude-code-sessions"

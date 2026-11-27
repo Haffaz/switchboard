@@ -107,6 +107,7 @@ final class SettingsModel: ObservableObject {
     func signInCode(_ profile: Profile) { run { await Actions.openTerminal(profile, .signIn) } }
     func makeDockApp(_ profile: Profile) { run { await Actions.makeDockApp(profile) } }
     func reveal(_ profile: Profile) { Actions.reveal(profile) }
+    func openTerminal(_ profile: Profile) { run { await Actions.openTerminal(profile, .shell) } }
     func remove(_ profile: Profile) { run { await Actions.remove(profile) } }
     func setSource(_ thing: SharedThing, for profile: Profile, to source: Profile?) {
         run { await Actions.setSharing(thing, for: profile, from: source) }

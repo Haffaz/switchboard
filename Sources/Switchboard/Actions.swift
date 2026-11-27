@@ -48,6 +48,28 @@ enum Actions {
         await DesktopSignIn.run(profile)
     }
 
+    /// Quit an account's Claude Desktop and open it again. Opening copies
+    /// in what it shares, so this is how shared sessions and extensions
+    /// reach a copy that is already running.
+    static func restartDesktop(_ profile: Profile) async {
+        guard !store.isDemo else { return }
+        Log.write("restart \(profile.name)")
+        await quit(profile)
+        guard ClaudeDesktop.running(profile) == nil else { return }  // it would not quit
+        await openDesktop(profile)
+    }
+
+    /// After a sharing change that only takes effect when Claude Desktop
+    /// starts, offer to restart a copy that is running.
+    private static func offerRestart(_ profile: Profile) async {
+        guard ClaudeDesktop.running(profile) != nil,
+              Dialogs.confirm("Restart Claude Desktop for “\(profile.displayName)”?",
+                              "Shared sessions in its Code tab, and shared extensions, appear after it restarts.",
+                              button: "Restart Now", cancel: "Later")
+        else { return }
+        await restartDesktop(profile)
+    }
+
     static func quit(_ profile: Profile) async {
         guard !store.isDemo else { return }
         Log.write("quit \(profile.name): asked")
@@ -157,6 +179,7 @@ enum Actions {
         else { return false }
         Log.write("sharing: \(target) \(thing.rawValue) \(from.map { "from \($0)" } ?? "off")")
         if !notes.value.isEmpty { Dialogs.info("Some history was kept aside", notes.value.joined(separator: "\n")) }
+        if source != nil, thing != .connectors { await offerRestart(profile) }
         return true
     }
 
@@ -178,6 +201,7 @@ enum Actions {
         }
         guard await perform({ try Sharing(store: accounts).setSameAsDefault(name, on) }) else { return false }
         Log.write("sharing: \(name) same as default \(on ? "on" : "off")")
+        if on { await offerRestart(profile) }
         return true
     }
 

@@ -31,6 +31,7 @@ enum Demo {
         // A bare program has no icon; borrow the project's, if run from its folder.
         Dialogs.iconOverride = NSImage(contentsOfFile: "design/icon-1024.png")
         let controller = MenuController()
+        controller.pendingOverride = ["client-acme": 2]
         try? FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {

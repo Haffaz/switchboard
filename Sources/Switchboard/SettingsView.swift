@@ -146,6 +146,8 @@ private struct AccountDetail: View {
             Section {
                 HStack {
                     if !profile.isDefault { Button("Add Dock Icon") { model.makeDockApp(profile) } }
+                    Button("Open Terminal") { model.openTerminal(profile) }
+                        .help("A Terminal window where claude and cprof use this account")
                     Button("Show Files") { model.reveal(profile) }
                     Spacer()
                     if !profile.isDefault { Button("Remove Account…", role: .destructive) { model.remove(profile) } }

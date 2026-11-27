@@ -101,10 +101,10 @@ enum Dialogs {
     }
 
     /// One plain question with a single action and Cancel.
-    static func confirm(_ title: String, _ text: String = "", button: String) -> Bool {
+    static func confirm(_ title: String, _ text: String = "", button: String, cancel: String = "Cancel") -> Bool {
         let alert = makeAlert(title, text)
         alert.addButton(withTitle: button)
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: cancel)
         return run(alert) == .alertFirstButtonReturn
     }
 

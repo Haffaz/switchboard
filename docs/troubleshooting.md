@@ -48,7 +48,7 @@ Connectors are copied from the account chosen on that account's page in Settings
 
 ### Extensions are missing in another account's Claude Desktop
 
-On that account's page in Settings, choose **Choose for each** and set Claude Desktop extensions to the account that has them, then quit and reopen its Claude Desktop. Extensions are copied only when its Claude Desktop starts, never while it is running.
+On that account's page in Settings, choose **Choose for each** and set Claude Desktop extensions to the account that has them, then choose **Restart Claude Desktop** for it in the Switchboard menu. Extensions are copied only when its Claude Desktop starts, never while it is running.
 
 ### `cprof continue` starts a new conversation
 
@@ -64,7 +64,7 @@ Another account keeps its Claude Code sessions in this one, so removing it would
 
 ### Shared sessions are missing from Claude Desktop's Code tab
 
-Claude Desktop reads its Code tab list once, when it starts. Quit that account's Claude Desktop from the Switchboard menu and open it again. The account also needs to have opened its Code tab once before; if it never has, open it, then quit and reopen.
+Claude Desktop reads its Code tab list once, when it starts. A number beside the account in the Switchboard menu shows how many sessions are waiting. Point at the account and choose **Restart to Show… New Sessions**. The account also needs to have opened its Code tab once before; if it never has, open it, then quit and reopen.
 
 Chats in Claude Desktop (not the Code tab) are never shared. They belong to one Claude account.
 

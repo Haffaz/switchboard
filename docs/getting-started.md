@@ -67,15 +67,16 @@ Your other Claude windows stay open and signed in. When the new window shows you
 
 <p align="center">
   <img src="images/menu.png" width="320" alt="The Switchboard menu with four accounts">
-  <img src="images/account-menu.png" width="276" alt="One account's menu: Open Claude Desktop, Open Claude Code, Open Terminal, Quit Claude Desktop">
+  <img src="images/account-menu.png" width="276" alt="One account's menu: Open Claude Desktop, Open Claude Code, Restart to Show 2 New Sessions, Quit Claude Desktop, Account Settings">
 </p>
 
 The menu holds only what you use every day.
 
 - **Click an account** to open its Claude Desktop. If it is already running, its window comes to the front.
-- **Point at an account** for Claude Code, a Terminal set to that account, and Quit.
+- **Point at an account** for Claude Code, Restart and Quit while its Claude Desktop runs, and **Account Settings…**, which opens that account's page in Settings.
 - A **green dot** means that account's Claude Desktop is running.
 - A **Sign In** badge means Claude Desktop is not signed in for that account yet.
+- A **number** means that many shared Claude Code sessions are waiting for its Code tab. Claude Desktop reads that list only when it starts, so point at the account and choose **Restart to Show… New Sessions**.
 - While the menu is open, **⌘1, ⌘2…** open Claude Desktop for the first nine accounts, and **⇧⌘1, ⇧⌘2…** open Claude Code.
 
 Closing a Claude window does not quit that Claude. It keeps running in the background, like any Mac app. To stop one, point at the account and choose **Quit Claude Desktop**.
@@ -86,7 +87,7 @@ Choose **Settings…** in the menu, or press **⌘,** while it is open. Everythi
 
 ### Accounts
 
-<p align="center"><img src="images/settings-accounts.png" width="560" alt="Settings, Accounts tab: a list of accounts on the left; on the right the selected account's name, icon, sign-in status for Claude Desktop and Claude Code, and buttons for Dock icon, Show Files and Remove"></p>
+<p align="center"><img src="images/settings-accounts.png" width="560" alt="Settings, Accounts tab: a list of accounts on the left; on the right the selected account's name, icon, sign-in status for Claude Desktop and Claude Code, and a Sharing choice, and buttons for Dock icon, Terminal, Show Files and Remove"></p>
 
 Pick an account on the left to:
 
