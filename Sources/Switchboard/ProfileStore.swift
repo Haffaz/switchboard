@@ -38,6 +38,14 @@ final class ProfileStore {
     func refresh(recheckLogins: Bool = false) async -> Bool {
         guard demoRunning == nil else { return false }
         let accounts = AccountStore()
+        // Keep sharing in step: a connector added in Default since the last
+        // look is copied to the other accounts. Does nothing when all is
+        // already in place, or when nothing is shared.
+        await Task.detached {
+            do { try Sharing(store: accounts).apply() } catch {
+                Log.write("sharing: could not apply: \(error.localizedDescription)")
+            }
+        }.value
         let base = await Task.detached { accounts.profiles() }.value
         if recheckLogins || Date().timeIntervalSince(loginsCheckedAt) > Self.loginMaxAge {
             let names = base.map(\.name)

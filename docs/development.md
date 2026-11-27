@@ -31,6 +31,7 @@ Everything is Swift, with no third-party libraries.
 ```
 Sources/SwitchboardCore/      Every rule, once. No user interface.
   AccountStore.swift            accounts on disk, shared links, names, icons, which account a folder uses
+  Sharing.swift                 optional sharing: history, connectors, Desktop extensions
   ClaudeDesktop.swift           finding, opening and quitting Claude Desktop copies
   ProcessArguments.swift        matching a running copy to its account
   LinkRouter.swift              where a claude:// link should go

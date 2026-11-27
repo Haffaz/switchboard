@@ -40,7 +40,19 @@ Switchboard asks Claude Code about its sign-in at most every 10 seconds. Close t
 
 ### A new account has no MCP servers
 
-That is expected. Claude Code stores MCP servers added with `--scope user` together with the sign-in, so each account has its own. Add them again in the new account.
+MCP servers are per account unless you share them. Switch on **Sharing → Claude Code Connectors**, and the servers you added in Default are copied to the other accounts. A copied server may still ask you to sign in once per account.
+
+### A connector I added does not show up in another account
+
+Connectors are copied from Default only. Add it while using the Default account, then open the Switchboard menu or run `cprof sync`.
+
+### Extensions are missing in another account's Claude Desktop
+
+Switch on **Sharing → Desktop Extensions**, then quit and reopen that account's Claude Desktop. Extensions are copied only when its Claude Desktop starts, never while it is running.
+
+### Sessions are missing after I switched Claude Code History on
+
+Look in the account's folder, `~/.claude-profiles/<name>/cli`, for a folder ending `.before-sharing`. Switchboard puts sessions there when the same file existed in both places, so that nothing is overwritten.
 
 ### An account ignores a change I made to my rules, agents or settings
 

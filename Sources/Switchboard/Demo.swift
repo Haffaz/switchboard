@@ -65,6 +65,10 @@ enum Demo {
                 accountMenu.popUp(positioning: nil, at: point, in: nil)
             }
         }
+        let sharingMenu = controller.builtSharingMenu()
+        failures += shoot(output.appendingPathComponent("sharing-menu.png"), dismiss: { sharingMenu.cancelTracking() }) {
+            sharingMenu.popUp(positioning: nil, at: point, in: nil)
+        }
         failures += shoot(output.appendingPathComponent("add-account.png"), dismiss: { NSApp.abortModal() }) {
             _ = Dialogs.askNewAccountName(taken: { _ in false })
         }
@@ -107,10 +111,17 @@ enum Demo {
             return false
         }
         let view = content.superview ?? content
-        guard let shot = view.bitmapImageRepForCachingDisplay(in: view.bounds) else {
+        // Draw at twice the size in points, whatever screen this runs on, so
+        // captures are sharp even when taken on a low-resolution display.
+        let scale = 2
+        guard let shot = NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: Int(view.bounds.width) * scale, pixelsHigh: Int(view.bounds.height) * scale,
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else {
             report(file, "could not make an image")
             return false
         }
+        shot.size = view.bounds.size
         view.cacheDisplay(in: view.bounds, to: shot)
 
         guard let content = shot.cgImage else { report(file, "could not read the capture"); return false }

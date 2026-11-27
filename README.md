@@ -21,6 +21,7 @@ Switchboard gives each account its own Claude Desktop window and its own Claude 
 - **Every account, one click away.** Open any account's Claude Desktop or Claude Code from the menu. A green dot shows which are running.
 - **Truly side by side.** Each account has its own sign-in, chats and projects. Nothing is signed out to make room.
 - **One shared setup.** Your `CLAUDE.md`, rules, agents, skills, hooks and settings apply to every account, from one place.
+- **Share more if you want.** Optional switches share Claude Code sessions, MCP servers and Desktop extensions between accounts.
 - **Per-project accounts.** Pin a folder to an account, and `claude` uses it there.
 - **A command-line twin.** `cprof` does everything the menu does, for scripts and terminals.
 - **Leaves your setup alone.** Your current Claude becomes the "Default" account. Switchboard never moves or changes it.

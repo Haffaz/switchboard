@@ -30,6 +30,30 @@ A shared item is a link, not a copy, so a change in `~/.claude` reaches every ac
 
 If you want one account to differ, replace its link with a real file inside `~/.claude-profiles/<name>/cli`. Switchboard leaves real files alone. To put missing links back, run `cprof link <name>`.
 
+## Optional sharing
+
+Three more things can be shared. Each is off until you switch it on, in the menu under **Sharing** or with `cprof share`.
+
+| Switch | What it shares | How |
+|---|---|---|
+| **Claude Code History** | Sessions, so `claude --resume` in any account lists every account's sessions. Also per-project memory and the saved file versions used to rewind. | Each account's history folders become links to the Default account's. |
+| **Claude Code Connectors** | MCP servers added for all projects (`claude mcp add --scope user`). | Copied from the Default account into each account's settings file. |
+| **Desktop Extensions** | Extensions and local MCP servers installed in Claude Desktop. | Copied from the Default account each time another account's Claude Desktop starts. |
+
+The Default account is always the source. Add a connector or install an extension there, and the other accounts receive it.
+
+Things to know:
+
+- **History moves files once.** When you switch it on, sessions an account already had are moved into the shared folder. If the same file exists in both places, the account's copy is kept aside in a folder ending `.before-sharing`, never overwritten.
+- **Connectors and extensions are copies.** An account keeps any connector it added itself. On a name clash, Default's version wins. An extension installed only in another account is replaced the next time that account's Claude Desktop starts.
+- **A copied connector may still ask you to sign in.** The list of servers is shared; each account's login to a server is not.
+- **Sharing history mixes accounts.** If one account is your employer's, its sessions become readable from the others. Check that this is allowed before you switch it on.
+- **Switching a share off** stops the linking or copying. What was already copied stays. Shared history stays with the Default account, and the other accounts start fresh.
+
+### What can never be shared
+
+Conversations in Claude Desktop, and connectors such as Gmail or Slack that you add in Claude's settings, are stored by Anthropic under one account. They are not on your Mac, so Switchboard cannot share them.
+
 ## Telling Claude copies apart
 
 Every running copy of Claude Desktop looks the same to macOS: same name, same icon, same app. Switchboard tells them apart by reading each copy's launch arguments, which include the data folder it was started with. A copy with no data folder argument is the Default account.
@@ -101,6 +125,7 @@ A cloned repository can contain one of these files. It can only name an account 
 |---|---|
 | `~/.claude-profiles/<name>/` | One folder per account, readable only by you |
 | `~/.claude-profiles/.launch/` | Small scripts that Terminal windows run |
+| `~/.claude-profiles/.sharing.json` | Which optional sharing is switched on |
 | `~/.claude-profiles/.default-icon`, `.default-label` | The Default account's icon and shown name, if you set them |
 | `~/Applications/Claude (<name>).app` | Dock launchers, if you make them |
 | `~/.local/bin/cprof` | A link to the command-line tool, if you install it |
@@ -124,5 +149,5 @@ The app and `cprof` are thin layers over the same core, so they cannot disagree 
 
 - **Mac only.** It depends on how macOS launches and identifies apps.
 - **Not sandboxed.** It has to start Claude and manage folders in your home folder.
-- **MCP servers are per account.** Claude Code stores them with the sign-in, so they are not shared.
+- **MCP servers are per account unless you share them.** Claude Code stores them with the sign-in, so they are copied, not linked. See [Optional sharing](#optional-sharing).
 - **Sign-in status can lag by a few seconds.** Switchboard asks Claude Code at most every 10 seconds.

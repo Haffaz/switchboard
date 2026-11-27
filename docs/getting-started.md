@@ -118,9 +118,21 @@ From then on, running `claude` anywhere inside that folder uses the `work` accou
 
 Every account uses the same `CLAUDE.md`, rules, agents, commands, skills, hooks, output styles, plugins, settings and key bindings. Change them once and every account sees the change.
 
-Each account keeps its own sign-in, chat history, projects, and MCP servers. If you use MCP servers, add them again in each new account.
+Each account keeps its own sign-in, chat history, projects and MCP servers.
 
-[How it works](how-it-works.md) has the full list.
+### Sharing more
+
+<p align="center"><img src="images/sharing-menu.png" width="306" alt="The Sharing menu: Rules, Skills, Plugins and Settings ticked, then three switches for Claude Code History, Claude Code Connectors and Desktop Extensions"></p>
+
+Under **Sharing** in the menu, three switches share more between accounts. All are off to begin with.
+
+- **Claude Code History** lets you resume any account's Claude Code sessions from any other account.
+- **Claude Code Connectors** copies the MCP servers you added in Default to the other accounts.
+- **Desktop Extensions** copies the extensions installed in Default's Claude Desktop to the other accounts, each time their Claude Desktop starts.
+
+Default is always the source: add a connector or install an extension there.
+
+Conversations in Claude Desktop, and connectors such as Gmail or Slack, belong to one Claude account on Anthropic's servers and cannot be shared. [How it works](how-it-works.md#optional-sharing) has the details.
 
 ## Removing an account
 

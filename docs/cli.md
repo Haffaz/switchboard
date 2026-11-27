@@ -122,6 +122,34 @@ Terminal windows open in Terminal.app. To use another app that can open `.comman
 export CPROF_TERMINAL_APP=iTerm
 ```
 
+## Sharing
+
+### `cprof share`
+
+Lists what accounts share and whether each optional share is on.
+
+```
+$ cprof share
+always  Rules, agents, skills, plugins and settings
+off     Claude Code History (history): Resume any account's Claude Code sessions from any other account.
+on      Claude Code Connectors (connectors): MCP servers added in Default are copied to the other accounts.
+off     Desktop Extensions (extensions): Extensions installed in Default's Claude Desktop are copied to the other accounts.
+```
+
+### `cprof share <history|connectors|extensions> <on|off>`
+
+Switches one of them on or off.
+
+```bash
+cprof share connectors on
+```
+
+[Optional sharing](how-it-works.md#optional-sharing) explains what each one does to your files.
+
+### `cprof sync`
+
+Applies sharing now. Use it after adding a connector in Default, to copy it to the other accounts without waiting. Opening the Switchboard menu does the same.
+
 ## Folders and shells
 
 ### `cprof use <name>`

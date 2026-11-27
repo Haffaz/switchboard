@@ -34,6 +34,7 @@ final class MenuController: NSObject, NSMenuDelegate {
 
     /// For demo mode: the menu, freshly built, and one account's side menu.
     func builtMenu() -> NSMenu { build(); return menu }
+    func builtSharingMenu() -> NSMenu { sharingMenu() }
     func builtAccountMenu(_ name: String) -> NSMenu? {
         build()
         return menu.items.first { ($0.representedObject as? String) == name }?.submenu
@@ -59,6 +60,9 @@ final class MenuController: NSObject, NSMenuDelegate {
         menu.addItem(.separator())
         menu.addItem(item("Add Account…", #selector(addAccount), key: "n"))
         if running.count > 1 { menu.addItem(item("Quit All Claude Desktops", #selector(quitAllClaude))) }
+        let sharing = NSMenuItem(title: "Sharing", action: nil, keyEquivalent: "")
+        sharing.submenu = sharingMenu()
+        menu.addItem(sharing)
 
         menu.addItem(.separator())
         let login = item("Open at Login", #selector(toggleLoginItem))
@@ -146,6 +150,25 @@ final class MenuController: NSObject, NSMenuDelegate {
         return sub
     }
 
+    /// What accounts share. The first line is always on; the rest are switches.
+    private func sharingMenu() -> NSMenu {
+        let sub = NSMenu()
+        sub.autoenablesItems = false
+        let always = MenuItems.disabled("Rules, Skills, Plugins and Settings")
+        always.state = .on
+        sub.addItem(always)
+        sub.addItem(.separator())
+        let on = Sharing(store: accounts).enabled()
+        for thing in SharedThing.allCases {
+            let entry = item(thing.title, #selector(toggleSharing(_:)))
+            entry.identifier = NSUserInterfaceItemIdentifier(thing.rawValue)
+            entry.state = on.contains(thing) ? .on : .off
+            entry.toolTip = thing.summary
+            sub.addItem(entry)
+        }
+        return sub
+    }
+
     private func iconMenu(_ profile: Profile) -> NSMenu {
         let sub = NSMenu()
         sub.autoenablesItems = false
@@ -220,6 +243,23 @@ final class MenuController: NSObject, NSMenuDelegate {
         let accounts = accounts
         // Typing the original name back is the same as clearing the label.
         Task { await perform { try accounts.setLabel(profile.name, to: label == original ? nil : label) } }
+    }
+
+    @objc private func toggleSharing(_ sender: NSMenuItem) {
+        guard let raw = sender.identifier?.rawValue, let thing = SharedThing(rawValue: raw) else { return }
+        let accounts = accounts
+        let turnOn = sender.state != .on
+        // History is the one that moves files, so it is the one that asks.
+        if turnOn, thing == .history,
+           !Dialogs.confirm("Share Claude Code history?", "Every account's sessions go into one folder.", button: "Share") {
+            return
+        }
+        Task {
+            let notes = Box<[String]>([])
+            guard await perform({ notes.value = try Sharing(store: accounts).set(thing, on: turnOn) }) else { return }
+            Log.write("sharing: \(thing.rawValue) \(turnOn ? "on" : "off")")
+            if !notes.value.isEmpty { Dialogs.info("Some history was kept aside", notes.value.joined(separator: "\n")) }
+        }
     }
 
     @objc private func setIcon(_ sender: NSMenuItem) {
@@ -305,7 +345,7 @@ final class MenuController: NSObject, NSMenuDelegate {
         let accounts = accounts
         guard let typed = Dialogs.askNewAccountName(taken: { accounts.exists($0) }) else { return }
         Task {
-            guard await perform({ try accounts.create(typed) }),
+            guard await perform({ try accounts.create(typed); try Sharing(store: accounts).apply() }),
                   let name = ProfileName.slug(typed), let profile = store.profile(named: name) else { return }
             await DesktopSignIn.run(profile)
         }
@@ -344,4 +384,10 @@ final class MenuController: NSObject, NSMenuDelegate {
     }
 
     @objc private func quit() { NSApp.terminate(nil) }
+}
+
+/// Carries a value out of work done on another thread.
+private final class Box<Value>: @unchecked Sendable {
+    var value: Value
+    init(_ value: Value) { self.value = value }
 }

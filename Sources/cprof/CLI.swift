@@ -24,6 +24,9 @@ struct CLI {
           login [name]           Open a Terminal window that signs Claude Code in
           terminal [name]        Open a Terminal window set to an account
 
+          share [thing on|off]   Show or change what accounts share: history, connectors, extensions
+          sync                   Apply sharing now (copy connectors, link history)
+
           use <name>             Pin this folder to an account (writes .claude-profile)
           which                  Print the account this folder resolves to
           env [name]             Print shell exports; use: eval "$(cprof env work)"
@@ -50,6 +53,8 @@ struct CLI {
         case "code": try TerminalLauncher.open(try resolve(args.first), mode: .claudeCode, store: store)
         case "login": try TerminalLauncher.open(try resolve(args.first), mode: .signIn, store: store)
         case "terminal", "term": try TerminalLauncher.open(try resolve(args.first), mode: .shell, store: store)
+        case "share": try share(args)
+        case "sync": try sync()
         case "use": try use(try name(args, usage: "cprof use <name>"))
         case "which": print(store.resolve(explicit: nil, environment: environment, cwd: cwd).name)
         case "env": print(store.shellExports(try resolve(args.first)))
@@ -115,6 +120,7 @@ struct CLI {
     private func add(_ words: [String]) throws {
         guard !words.isEmpty, !words[0].hasPrefix("-") else { throw SwitchboardError("usage: cprof add <name>") }
         let profile = try store.create(words.joined(separator: " "))
+        try Sharing(store: store).apply()  // a new account joins whatever is shared
         let shown = profile.label.map { " (shown as \($0))" } ?? ""
         print("""
             Created \(profile.name)\(shown). Sign in with:
@@ -181,6 +187,34 @@ struct CLI {
         let argv: [UnsafeMutablePointer<CChar>?] = ([claude.path] + args).map { strdup($0) } + [nil]
         execv(claude.path, argv)
         throw SwitchboardError("could not start \(claude.path): \(String(cString: strerror(errno)))")
+    }
+
+    /// `cprof share` lists what is shared; `cprof share history on` changes it.
+    private func share(_ args: [String]) throws {
+        let sharing = Sharing(store: store)
+        guard let first = args.first else {
+            print("always  Rules, agents, skills, plugins and settings")
+            for thing in SharedThing.allCases {
+                print("\(sharing.isOn(thing) ? "on    " : "off   ")  \(thing.title) (\(thing.rawValue)): \(thing.summary)")
+            }
+            return
+        }
+        guard let thing = SharedThing(rawValue: first), args.count == 2, args[1] == "on" || args[1] == "off" else {
+            let names = SharedThing.allCases.map(\.rawValue).joined(separator: "|")
+            throw SwitchboardError("usage: cprof share [\(names) on|off]")
+        }
+        let notes = try sharing.set(thing, on: args[1] == "on")
+        print("\(thing.title): \(args[1])")
+        notes.forEach { print("note: \($0)") }
+        if thing == .extensions, args[1] == "on" {
+            print("Extensions are copied the next time each account's Claude Desktop starts.")
+        }
+    }
+
+    private func sync() throws {
+        let notes = try Sharing(store: store).apply()
+        notes.forEach { print("note: \($0)") }
+        print("Sharing applied.")
     }
 
     private func use(_ name: String) throws {
