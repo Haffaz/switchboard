@@ -5,7 +5,9 @@ import SwitchboardCore
 /// views read from here and never touch files themselves.
 @MainActor
 final class SettingsModel: ObservableObject {
-    enum Tab: String, CaseIterable { case accounts = "Accounts", sharing = "Sharing", general = "General" }
+    enum Tab: String, CaseIterable { case accounts = "Accounts", general = "General" }
+    /// The one sharing choice on an account's page.
+    enum SharingMode: Hashable { case same, separate, custom }
 
     @Published var tab: Tab = .accounts
     @Published var selected: String = Profile.defaultName
@@ -15,12 +17,31 @@ final class SettingsModel: ObservableObject {
     @Published private(set) var sources: [String: [SharedThing: String]] = [:]
     @Published private(set) var opensAtLogin = false
     @Published private(set) var commandLineToolInstalled = false
+    /// Accounts where "Custom" was picked but nothing is chosen yet, so the
+    /// three menus stay open instead of falling back to "Separate".
+    @Published private var customOpen: Set<String> = []
 
     private let store = ProfileStore.shared
 
     var selectedProfile: Profile? { profiles.first { $0.name == selected } ?? profiles.first }
-    /// The accounts that can be given a source: all but the default one.
-    var sharingAccounts: [Profile] { profiles.filter { !$0.isDefault } }
+    /// The default account's shown name, such as "Work". Never the word
+    /// "Default" unless that is what it is called.
+    var defaultDisplayName: String { profiles.first(where: \.isDefault)?.displayName ?? "Default" }
+
+    func sharingMode(_ profile: Profile) -> SharingMode {
+        if isSameAsDefault(profile) { return .same }
+        if (sources[profile.name] ?? [:]).isEmpty && !customOpen.contains(profile.name) { return .separate }
+        return .custom
+    }
+
+    func setSharingMode(_ profile: Profile, _ mode: SharingMode) {
+        guard mode != sharingMode(profile) else { return }
+        switch mode {
+        case .same: customOpen.remove(profile.name); setSameAsDefault(profile, true)
+        case .separate: customOpen.remove(profile.name); setSameAsDefault(profile, false)
+        case .custom: customOpen.insert(profile.name)
+        }
+    }
 
     func isSameAsDefault(_ profile: Profile) -> Bool {
         !profile.isDefault && SharedThing.allCases.allSatisfy { sources[profile.name]?[$0] == Profile.defaultName }

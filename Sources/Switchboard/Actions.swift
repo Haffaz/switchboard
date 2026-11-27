@@ -163,12 +163,19 @@ enum Actions {
     /// Switch "Same as Default" for an account. Returns true if it changed.
     @discardableResult
     static func setSameAsDefault(_ profile: Profile, _ on: Bool) async -> Bool {
-        if on, !Dialogs.confirm("Make “\(profile.displayName)” the same as Default?",
-                                "Its Claude Code sessions join Default's, and Default's connectors and extensions are copied in.",
+        let accounts = accounts, name = profile.name
+        let main = store.profile(named: Profile.defaultName)?.displayName ?? "Default"
+        if on, !Dialogs.confirm("Make “\(profile.displayName)” the same as \(main)?",
+                                "Its Claude Code sessions join \(main)'s, and \(main)'s connectors and extensions are copied in.",
                                 button: "Make Same") {
             return false
         }
-        let accounts = accounts, name = profile.name
+        if !on, Sharing(store: accounts).source(.history, for: name) != nil,
+           !Dialogs.confirm("Keep “\(profile.displayName)” separate?",
+                            "It starts with an empty Claude Code history. The sessions it shared stay where they are.",
+                            button: "Keep Separate") {
+            return false
+        }
         guard await perform({ try Sharing(store: accounts).setSameAsDefault(name, on) }) else { return false }
         Log.write("sharing: \(name) same as default \(on ? "on" : "off")")
         return true

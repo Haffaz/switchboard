@@ -9,7 +9,7 @@ A menu bar app for Claude Desktop and Claude Code.</p>
   <img src="docs/images/menu.png" width="320" alt="The Switchboard menu: four accounts, two with a green dot because their Claude Desktop is running, then Settings and Quit">
 </p>
 <p align="center">
-  <img src="docs/images/settings-sharing.png" width="560" alt="Switchboard Settings, Sharing tab: for each account, which other account it shares history, connectors and extensions with">
+  <img src="docs/images/settings-accounts.png" width="560" alt="Switchboard Settings: an account's page with its name, icon, sign-in, and a Sharing choice set to Custom, showing which account its history, connectors and extensions come from">
 </p>
 
 ## Why

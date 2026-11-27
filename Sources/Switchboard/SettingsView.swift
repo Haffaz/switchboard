@@ -46,8 +46,6 @@ struct SettingsView: View {
         TabView(selection: $model.tab) {
             AccountsPane(model: model)
                 .tabItem { Label("Accounts", systemImage: "person.2") }.tag(SettingsModel.Tab.accounts)
-            SharingPane(model: model)
-                .tabItem { Label("Sharing", systemImage: "arrow.triangle.branch") }.tag(SettingsModel.Tab.sharing)
             GeneralPane(model: model)
                 .tabItem { Label("General", systemImage: "gearshape") }.tag(SettingsModel.Tab.general)
         }
@@ -139,38 +137,10 @@ private struct AccountDetail: View {
                     Button(profile.codeSignedIn ? "Sign In Again…" : "Sign In…") { model.signInCode(profile) }
                 }
             }
-            Section {
-                if profile.isDefault {
-                    let shared = model.sharesFrom(profile)
-                    if shared.isEmpty {
-                        Text("No account shares from this one yet.").foregroundStyle(.secondary)
-                    } else {
-                        ForEach(shared, id: \.thing) { entry in
-                            LabeledContent(entry.thing.title) {
-                                Text(entry.accounts.map(\.displayName).joined(separator: ", ")).foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                } else {
-                    Toggle(isOn: Binding(get: { model.isSameAsDefault(profile) },
-                                         set: { model.setSameAsDefault(profile, $0) })) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Same as Default")
-                            Text("Shares Default's Claude Code history, connectors and extensions, so you can continue on this account where Default left off.")
-                                .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    if !model.isSameAsDefault(profile) {
-                        ForEach(SharedThing.allCases, id: \.self) { thing in
-                            LabeledContent(thing.title) {
-                                SourcePicker(model: model, profile: profile, thing: thing).frame(width: 150)
-                            }
-                            .help(thing.summary)
-                        }
-                    }
-                }
-            } header: {
-                Text(profile.isDefault ? "Shared from this account" : "Sharing")
+            if profile.isDefault {
+                UsedBySection(model: model, profile: profile)
+            } else {
+                SharingSection(model: model, profile: profile)
             }
             Section {
                 HStack {
@@ -218,53 +188,86 @@ private struct IconPicker: View {
 
 // MARK: - Sharing
 
-private struct SharingPane: View {
+/// An account's one sharing choice: the same as the default account,
+/// separate, or chosen thing by thing.
+private struct SharingSection: View {
     @ObservedObject var model: SettingsModel
+    let profile: Profile
 
     var body: some View {
-        Form {
-            Section {
-                if model.sharingAccounts.isEmpty {
-                    Text("Add a second account to share between accounts.").foregroundStyle(.secondary)
-                } else {
-                    Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 10) {
-                        GridRow {
-                            Text("Account")
-                            ForEach(SharedThing.allCases, id: \.self) { thing in
-                                Text(thing.shortTitle).help(thing.summary)
-                            }
-                        }
-                        .font(.callout.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        Divider().gridCellUnsizedAxes(.horizontal)
-                        ForEach(model.sharingAccounts, id: \.name) { profile in
-                            GridRow {
-                                Label(profile.displayName, systemImage: profile.iconSymbol)
-                                    .lineLimit(1)
-                                    .frame(minWidth: 120, alignment: .leading)
-                                ForEach(SharedThing.allCases, id: \.self) { thing in
-                                    SourcePicker(model: model, profile: profile, thing: thing).fixedSize()
-                                }
-                            }
+        let main = model.defaultDisplayName
+        let mode = model.sharingMode(profile)
+        Section {
+            Picker("Share with", selection: Binding(get: { mode }, set: { model.setSharingMode(profile, $0) })) {
+                Text("Same as \(main)").tag(SettingsModel.SharingMode.same)
+                Text("Separate").tag(SettingsModel.SharingMode.separate)
+                Divider()
+                Text("Custom").tag(SettingsModel.SharingMode.custom)
+            }
+            .pickerStyle(.menu)
+            if mode == .custom {
+                ForEach(SharedThing.allCases, id: \.self) { thing in
+                    LabeledContent {
+                        SourcePicker(model: model, profile: profile, thing: thing).frame(width: 150)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(Self.from(thing))
+                            Text(Self.how(thing)).font(.callout).foregroundStyle(.secondary)
                         }
                     }
-                    .padding(.vertical, 4)
-                }
-            } header: {
-                Text("Share with another account")
-            } footer: {
-                VStack(alignment: .leading, spacing: 6) {
-                    Note("History: the two accounts use one set of Claude Code sessions. Connectors and extensions: copied from the account you pick. Default can be shared from, but is never changed.")
-                    Note("Rules, skills, plugins and settings are always shared by every account. Conversations in Claude Desktop, and connectors such as Gmail or Slack, belong to one Claude account and cannot be shared.")
                 }
             }
+        } header: {
+            Text("Sharing")
+        } footer: {
+            // Custom explains itself row by row.
+            if mode == .same {
+                Note("Uses \(main)'s Claude Code history, so either account can continue a conversation. \(main)'s connectors and extensions are copied in.")
+            } else if mode == .separate {
+                Note("Keeps its own Claude Code history, connectors and extensions.")
+            }
         }
-        .formStyle(.grouped)
+    }
+
+    static func from(_ thing: SharedThing) -> String {
+        switch thing {
+        case .history: "Claude Code history from"
+        case .connectors: "Connectors from"
+        case .extensions: "Desktop extensions from"
+        }
+    }
+
+    static func how(_ thing: SharedThing) -> String {
+        switch thing {
+        case .history: "The same sessions, changes show in both"
+        case .connectors: "Copied in; ones added here stay here"
+        case .extensions: "Copied in when Claude Desktop starts"
+        }
     }
 }
 
-/// "Not shared", or one of the other accounts. Used in the table and on
-/// each account's page.
+/// On the default account's page: which accounts take what from it.
+private struct UsedBySection: View {
+    @ObservedObject var model: SettingsModel
+    let profile: Profile
+
+    var body: some View {
+        let shared = model.sharesFrom(profile)
+        Section("Shared with other accounts") {
+            if shared.isEmpty {
+                Text("No other account uses this one's history, connectors or extensions.").foregroundStyle(.secondary)
+            } else {
+                ForEach(shared, id: \.thing) { entry in
+                    LabeledContent(entry.thing.title) {
+                        Text(entry.accounts.map(\.displayName).joined(separator: ", ")).foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// "Not shared", or one of the other accounts.
 private struct SourcePicker: View {
     @ObservedObject var model: SettingsModel
     let profile: Profile

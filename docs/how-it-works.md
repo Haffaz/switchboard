@@ -34,11 +34,19 @@ If you want one account to differ, replace its link with a real file inside `~/.
 
 Beyond the items above, an account can share three more things with another account. You choose, for each account and each thing, which account it shares with.
 
-A new account starts **Same as Default**: it shares all three with the Default account. Switch that off in Settings, or create the account with `cprof add <name> --separate`, and nothing more is shared until you choose.
+Each account's page in **Settings → Accounts** has one **Sharing** choice:
 
-Make the choices in **Settings → Sharing**, on an account's page in **Settings → Accounts**, or with `cprof share`.
+- **Same as Default** (shown with your Default account's name): shares all three with the Default account. New accounts start here.
+- **Separate:** shares none of the three.
+- **Custom:** pick an account for each of the three.
 
-| Thing | When Client shares it with Work | How |
+From the terminal, use `cprof share`, or create an account with `cprof add <name> --separate`.
+
+### Does it stay in sync?
+
+Only history. The two accounts use the same files, so a session changed in one is changed in the other at once. Connectors and extensions are copies, made one way, from the account you picked: something added there arrives later, and something added in the receiving account stays there.
+
+| Thing | When Client takes it from Work | How |
 |---|---|---|
 | **Claude Code History** | Client and Work use one set of sessions. `claude --resume` in either lists both accounts' sessions, with per-project memory and the saved file versions used to rewind. | Client's history folders become links to Work's. |
 | **Claude Code Connectors** | Work's MCP servers (those added with `claude mcp add --scope user`) are copied into Client. | Copied into Client's settings file, every time you open the menu or Settings. |

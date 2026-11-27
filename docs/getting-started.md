@@ -49,7 +49,7 @@ Click the menu bar icon, choose **Settings…**, and click **+** under the accou
 
 Type a name, such as "Work", and click **Add**. The name is kept exactly as you type it.
 
-A new account starts **Same as Default**: it shares your Default account's Claude Code history, connectors and extensions. You can switch that off on its page in Settings.
+A new account starts the same as your Default account: it shares its Claude Code history, connectors and extensions. You can change that on its page in Settings.
 
 ## 3. Sign in
 
@@ -97,10 +97,6 @@ Pick an account on the left to:
 
 **+** under the list adds an account.
 
-### Sharing
-
-See [What is shared between accounts](#what-is-shared-between-accounts) below.
-
 ### General
 
 <p align="center"><img src="images/settings-general.png" width="560" alt="Settings, General tab: Open at login, Command line tool, Help with Open Guide and Show Log, and Version"></p>
@@ -137,19 +133,17 @@ Each account keeps its own sign-in, chat history, projects and MCP servers.
 
 ### Sharing more
 
-<p align="center"><img src="images/settings-sharing.png" width="560" alt="Settings, Sharing tab: a table with one row per account and a menu for History, Connectors and Extensions in each row"></p>
+Each account's page has one **Sharing** choice. Say your Default account is called Work:
 
-Each account's page in **Settings → Accounts** has a **Same as Default** switch. When it is on, the account shares all three things below with Default. New accounts start with it on. Switch it off to choose each one yourself.
+- **Same as Work:** the account uses Work's Claude Code history, and gets copies of Work's connectors and extensions. New accounts start here.
+- **Separate:** the account keeps its own.
+- **Custom:** choose an account for each of the three: Claude Code history, connectors, and Claude Desktop extensions.
 
-In **Settings → Sharing**, pick for each account which other account it shares with:
+History stays in sync: both accounts use the same sessions, so a change in one shows in the other. Connectors and extensions are copied one way, from the account you chose.
 
-- **History:** the two accounts use one set of Claude Code sessions, so either can resume them.
-- **Connectors:** the other account's MCP servers are copied in.
-- **Extensions:** the other account's Claude Desktop extensions are copied in when Claude Desktop starts.
+Work itself can be shared from but is never changed. Its page lists which accounts use it.
 
-For example, set Client's Connectors to Work, and Client gets every MCP server you add in Work. Leave Personal at "Not shared" and it stays separate.
-
-The same menus are on each account's page in **Settings → Accounts**, when Same as Default is off. Default can be shared from but is never changed.
+Conversations in Claude Desktop, and connectors such as Gmail or Slack, belong to one Claude account on Anthropic's servers and cannot be shared. [How it works](how-it-works.md#optional-sharing) has the details.
 
 ### Continuing on another account
 
