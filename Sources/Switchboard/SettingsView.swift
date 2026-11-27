@@ -67,6 +67,7 @@ private struct AccountsPane: View {
                         HStack(spacing: 8) {
                             Image(systemName: profile.iconSymbol).frame(width: 18)
                             Text(profile.displayName).lineLimit(1)
+                            if profile.isDefault { MainTag() }
                             Spacer(minLength: 4)
                             if model.running.contains(profile.name) {
                                 Circle().fill(.green).frame(width: 7, height: 7).help("Claude Desktop is running")
@@ -120,7 +121,7 @@ private struct AccountDetail: View {
                 LabeledContent("Icon") { IconPicker(selected: profile.icon) { model.setIcon(profile, to: $0) } }
             } footer: {
                 if profile.isDefault {
-                    Note("This is the Claude setup you had before Switchboard. It is never moved or changed.")
+                    Note("Your main account: the Claude setup you had before Switchboard. Other accounts can share its conversations, connectors and extensions. It is never moved or changed.")
                 }
             }
             Section("Sign-in") {
@@ -200,7 +201,7 @@ private struct SharingSection: View {
         let mode = model.sharingMode(profile)
         Section {
             ChoiceRow(title: "Share with \(main)",
-                      detail: "Claude Code conversations, connectors and extensions.",
+                      detail: "Your main account's Claude Code conversations, connectors and extensions.",
                       selected: mode == .same) { model.setSharingMode(profile, .same) }
             ChoiceRow(title: "Keep separate",
                       detail: "Its own conversations, connectors and extensions.",
@@ -348,6 +349,19 @@ private struct GeneralPane: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+/// Marks the main account (the one Switchboard calls "default") in the list.
+private struct MainTag: View {
+    var body: some View {
+        Text("Main")
+            .font(.caption.weight(.medium))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 1)
+            .background(.quaternary, in: Capsule())
+            .help("Your main account: the Claude setup you had before Switchboard")
     }
 }
 

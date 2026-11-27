@@ -24,7 +24,7 @@ Commands marked `[name]` work without a name. They then use the first of these t
 2. the nearest `.claude-profile` file, in the current folder or any folder above it,
 3. `default`.
 
-Account names use lowercase letters, digits, `-` and `_`, start with a letter or digit, and are at most 32 characters. `default` is your original setup and always exists.
+Account names use lowercase letters, digits, `-` and `_`, start with a letter or digit, and are at most 32 characters. `default` is your main account, the setup you had before Switchboard, and always exists.
 
 An account can also have a friendlier shown name, set with `cprof rename`. Commands always take the account name, not the shown name.
 
@@ -36,7 +36,7 @@ Lists accounts and the email Claude Code is signed in with. `*` marks the accoun
 
 ```
 $ cprof list
-* default          you@personal.example
+* default          you@personal.example   main account
   work             you@company.example
   side-project     (not signed in)
 ```

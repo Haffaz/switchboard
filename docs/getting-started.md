@@ -9,7 +9,9 @@ You need:
 - macOS 14 or later.
 - [Claude Desktop](https://claude.ai/download), [Claude Code](https://claude.com/claude-code), or both.
 
-Your current Claude setup stays exactly as it is. Switchboard lists it as **Default** and never moves or changes it. You can rename it, for example to "Personal".
+Your current Claude setup stays exactly as it is. It becomes your **main account**: Switchboard lists it as **Default**, marked **Main** in Settings, and never moves or changes it. You can rename it, for example to "Work".
+
+You have one main account. Every account you add is an extra account, and by default it shares the main account's Claude Code conversations, connectors and extensions.
 
 ## 1. Install
 
@@ -49,7 +51,7 @@ Click the menu bar icon, choose **Settings…**, and click **+** under the accou
 
 Type a name, such as "Work", and click **Add**. The name is kept exactly as you type it.
 
-A new account starts the same as your Default account: it shares its Claude Code history, connectors and extensions. You can change that on its page in Settings.
+A new account starts sharing your main account's Claude Code conversations, connectors and extensions. You can change that on its page in Settings.
 
 ## 3. Sign in
 
@@ -133,7 +135,7 @@ Each account keeps its own sign-in, chat history, projects and MCP servers.
 
 ### Sharing more
 
-Each account's page has one **Sharing** choice. Say your Default account is called Work:
+Each extra account's page has one **Sharing** choice. Say your main account is called Work:
 
 - **Share with Work:** the account uses Work's Claude Code conversations, and gets copies of Work's connectors and extensions. New accounts start here.
 - **Keep separate:** the account keeps its own.

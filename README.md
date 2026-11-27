@@ -23,11 +23,11 @@ Switchboard gives each account its own Claude Desktop window and its own Claude 
 - **Every account, one click away.** Open any account's Claude Desktop or Claude Code from the menu. A green dot shows which are running.
 - **Truly side by side.** Each account has its own sign-in, chats and projects. Nothing is signed out to make room.
 - **One shared setup.** Your `CLAUDE.md`, rules, agents, skills, hooks and settings apply to every account, from one place.
-- **Share between the accounts you choose.** New accounts share Claude Code sessions, MCP servers and Desktop extensions with Default. You can pick other sources, or share nothing.
+- **Share between the accounts you choose.** New accounts share Claude Code sessions, MCP servers and Desktop extensions with your main account. You can pick other sources, or share nothing.
 - **Continue on another account.** `cprof continue personal` opens this folder's latest Claude Code conversation as Personal.
 - **Per-project accounts.** Pin a folder to an account, and `claude` uses it there.
 - **A command-line twin.** `cprof` does everything the menu does, for scripts and terminals.
-- **Leaves your setup alone.** Your current Claude becomes the "Default" account. Switchboard never moves or changes it.
+- **Leaves your setup alone.** Your current Claude becomes your **main account** (listed as Default until you rename it). Switchboard never moves or changes it.
 
 ## Install
 
@@ -80,7 +80,7 @@ Your shared setup is linked into each account, so it stays in one place. [How it
 Switchboard never reads tokens, passwords or Keychain items, and never stores or logs sign-in codes. It contains no third-party code and makes no network requests of its own. [What it reads](docs/how-it-works.md#what-switchboard-reads) lists everything.
 
 **Will it break my current Claude?**
-No. Your existing setup is the Default account. Switchboard only reads it.
+No. Your existing setup is your main account. Switchboard only reads it.
 
 **Why does macOS ask to let Switchboard control Claude?**
 To bring a specific account's window to the front, and to hand a sign-in to the right window. [Details](docs/how-it-works.md#why-macos-asks-for-permission).
@@ -89,7 +89,7 @@ To bring a specific account's window to the front, and to hand a sign-in to the 
 Possibly. It relies on two behaviours of Claude's apps, described above. If either changes, Switchboard will need an update.
 
 **How do I remove it?**
-See [Uninstalling](docs/troubleshooting.md#uninstalling). Your Default account is untouched.
+See [Uninstalling](docs/troubleshooting.md#uninstalling). Your main account is untouched.
 
 ## Documentation
 

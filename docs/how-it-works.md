@@ -36,7 +36,7 @@ Beyond the items above, an account can share three more things with another acco
 
 Each account's page in **Settings → Accounts** has one **Sharing** choice:
 
-- **Share with Default** (shown with your Default account's name): shares all three with the Default account. New accounts start here.
+- **Share with** your main account (shown by its name): shares all three with the main account. New accounts start here.
 - **Keep separate:** shares none of the three.
 - **Choose for each:** pick an account for each of the three.
 
@@ -54,7 +54,7 @@ Only history. The two accounts use the same files, so a session changed in one i
 
 Rules that keep this safe:
 
-- **Default is only ever a source.** Other accounts can share from it, but Switchboard never writes to the setup you had before. Default's own choices are not shown.
+- **The main account is only ever a source.** Other accounts can share from it, but Switchboard never writes to the setup you had before. It has no sharing choice of its own.
 - **History can chain but never loop.** If Client shares history with Work and Work with Default, all three use Default's sessions. Switchboard refuses a choice that would go round in a circle.
 - **Sessions are moved, never overwritten.** When an account starts sharing history, its existing sessions are moved into the shared folder. If the same file exists in both places, the account's copy is kept aside in a folder ending `.before-sharing`.
 - **Copies keep what the account added.** An account keeps any connector it added itself; on a name clash, the source's version wins. An extension installed only in the account is replaced the next time its Claude Desktop starts.

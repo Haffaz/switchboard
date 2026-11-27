@@ -119,7 +119,8 @@ struct CLI {
             let mark = profile.name == current ? "*" : " "
             let shown = profile.label.map { "\(profile.name) (\($0))" } ?? profile.name
             let padded = shown.count >= 24 ? shown + " " : shown.padding(toLength: 24, withPad: " ", startingAt: 0)
-            print("\(mark) \(padded) \(profile.email.isEmpty ? "(not signed in)" : profile.email)")
+            let email = profile.email.isEmpty ? "(not signed in)" : profile.email
+            print("\(mark) \(padded) \(email)\(profile.isDefault ? "   main account" : "")")
         }
     }
 

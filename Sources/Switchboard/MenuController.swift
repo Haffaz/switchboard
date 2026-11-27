@@ -65,7 +65,8 @@ final class MenuController: NSObject, NSMenuDelegate {
         row.onStateImage = MenuItems.runningDot()
         row.state = running ? .on : .off
         if profile.needsDesktopSignIn { row.badge = NSMenuItemBadge(string: "Sign In") }
-        row.toolTip = running ? "Claude Desktop is running" : nil
+        row.toolTip = [profile.isDefault ? "Main account" : nil, running ? "Claude Desktop is running" : nil]
+            .compactMap { $0 }.joined(separator: " · ").nilIfEmpty
         row.submenu = accountMenu(profile, running: running, key: key)
         return row
     }
@@ -121,4 +122,8 @@ final class MenuController: NSObject, NSMenuDelegate {
 
     @objc private func openSettings() { SettingsWindow.shared.show() }
     @objc private func quit() { NSApp.terminate(nil) }
+}
+
+private extension String {
+    var nilIfEmpty: String? { isEmpty ? nil : self }
 }
