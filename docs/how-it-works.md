@@ -9,7 +9,7 @@ Switchboard does not change Claude. It starts Claude's own apps in a way that gi
 | **Claude Code** | The `CLAUDE_CONFIG_DIR` setting tells Claude Code which folder to use. Claude Code keeps a separate Keychain login for each folder. | `~/.claude-profiles/<name>/cli` |
 | **Claude Desktop** | A separate copy of the app is started with its own data folder (the `--user-data-dir` option). | `~/.claude-profiles/<name>/desktop` |
 
-Each account has a fixed name, which its folders are named after, and an optional shown name that you can change at any time with **Rename…**. Renaming never moves anything.
+Each account has a fixed name, which its folders are named after, and an optional shown name that you can change at any time in **Settings → Accounts**. Renaming never moves anything.
 
 The **Default** account is your existing setup: `~/.claude` for Claude Code, and Claude Desktop's normal data folder. Switchboard starts it the ordinary way and never moves or changes it.
 
@@ -32,7 +32,7 @@ If you want one account to differ, replace its link with a real file inside `~/.
 
 ## Optional sharing
 
-Three more things can be shared. Each is off until you switch it on, in the menu under **Sharing** or with `cprof share`.
+Three more things can be shared. Each is off until you switch it on, in **Settings → Sharing** or with `cprof share`.
 
 | Switch | What it shares | How |
 |---|---|---|

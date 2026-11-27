@@ -38,7 +38,10 @@ Sources/SwitchboardCore/      Every rule, once. No user interface.
   Launchers.swift               Terminal windows and Dock launchers
   Shell.swift                   running other programs, and asking Claude Code about its login
 Sources/Switchboard/          The menu bar app.
-  MenuController.swift          the menu and its actions
+  MenuController.swift          the menu bar menu: accounts, Add Account, Settings, Quit
+  SettingsView.swift            the Settings window: Accounts, Sharing and General tabs
+  SettingsModel.swift           what the Settings window shows, and the changes it asks for
+  Actions.swift                 everything the app can do; the menu and Settings both call it
   DesktopSignIn.swift           the sign-in flow
   LinkRelay.swift               owning claude:// links during a sign-in
   Dialogs.swift                 every dialog, in one place
@@ -56,6 +59,7 @@ docs/                         The guides.
 
 - **A rule or a decision** goes in `SwitchboardCore`, with a test. Examples: what a valid account name is, which items are shared, where a link is routed.
 - **The app and `cprof` stay thin.** They read input, call the core, and show the result. If you are writing the same check in both, it belongs in the core.
+- **Daily actions go in the menu; everything else in Settings.** Keep the menu short.
 - **Wording shown to people** goes in `Dialogs.swift`, or in `CLI.swift` for `cprof`. Write it for someone who has never seen a terminal.
 - **Anything that needs a running Claude** cannot be unit tested. Keep that code small and put the decisions around it in the core.
 

@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         controller = MenuController()
+        NSApp.mainMenu = Self.standardMenu()
         Task {
             // If an earlier run stopped mid sign-in, hand claude:// links back.
             await LinkRelay.returnLinks()
@@ -28,6 +29,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         await LinkRelay.shared.stop()
         Log.write("selftest: end")
         NSApp.terminate(nil)
+    }
+
+    /// A menu-bar-only app has no menu bar of its own, so without this the
+    /// usual keys (copy, paste, select all, close window) do nothing in the
+    /// Settings window. It is never shown; it only gives those keys a home.
+    private static func standardMenu() -> NSMenu {
+        let main = NSMenu()
+        func submenu(_ title: String, _ items: [(String, Selector, String)]) {
+            let menu = NSMenu(title: title)
+            for (name, action, key) in items { menu.addItem(withTitle: name, action: action, keyEquivalent: key) }
+            let holder = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+            holder.submenu = menu
+            main.addItem(holder)
+        }
+        submenu("Switchboard", [("Quit Switchboard", #selector(NSApplication.terminate(_:)), "q")])
+        submenu("Edit", [
+            ("Undo", Selector(("undo:")), "z"), ("Cut", #selector(NSText.cut(_:)), "x"),
+            ("Copy", #selector(NSText.copy(_:)), "c"), ("Paste", #selector(NSText.paste(_:)), "v"),
+            ("Select All", #selector(NSText.selectAll(_:)), "a"),
+        ])
+        submenu("Window", [("Close", #selector(NSWindow.performClose(_:)), "w")])
+        return main
     }
 
     /// claude:// links arrive here only while Switchboard is relaying a sign-in.

@@ -6,8 +6,10 @@
 A menu bar app for Claude Desktop and Claude Code.</p>
 
 <p align="center">
-  <img src="docs/images/menu.png" width="372" alt="The Switchboard menu: four accounts, two with a green dot because their Claude Desktop is running">
-  <img src="docs/images/account-menu.png" width="352" alt="One account's menu: Open Claude Desktop, Open Claude Code, Open Terminal, Quit, Rename, Icon, and more">
+  <img src="docs/images/menu.png" width="320" alt="The Switchboard menu: four accounts, two with a green dot because their Claude Desktop is running, then Add Account, Settings and Quit">
+</p>
+<p align="center">
+  <img src="docs/images/settings-sharing.png" width="560" alt="Switchboard Settings, Sharing tab: switches for Claude Code history, Claude Code connectors and Desktop extensions">
 </p>
 
 ## Why
@@ -21,7 +23,7 @@ Switchboard gives each account its own Claude Desktop window and its own Claude 
 - **Every account, one click away.** Open any account's Claude Desktop or Claude Code from the menu. A green dot shows which are running.
 - **Truly side by side.** Each account has its own sign-in, chats and projects. Nothing is signed out to make room.
 - **One shared setup.** Your `CLAUDE.md`, rules, agents, skills, hooks and settings apply to every account, from one place.
-- **Share more if you want.** Optional switches share Claude Code sessions, MCP servers and Desktop extensions between accounts.
+- **Share more if you want.** Switches in Settings share Claude Code sessions, MCP servers and Desktop extensions between accounts.
 - **Per-project accounts.** Pin a folder to an account, and `claude` uses it there.
 - **A command-line twin.** `cprof` does everything the menu does, for scripts and terminals.
 - **Leaves your setup alone.** Your current Claude becomes the "Default" account. Switchboard never moves or changes it.
@@ -58,7 +60,7 @@ cd switchboard && ./build.sh --install
 2. Type a name, such as "Work".
 3. Sign in in the Claude window that opens.
 
-That's it. Click an account to open its Claude Desktop, or point at it for Claude Code and everything else. The [getting started guide](docs/getting-started.md) has pictures of each step.
+That's it. Click an account to open its Claude Desktop, or point at it for Claude Code. Renaming, icons and sharing are in **Settings**. The [getting started guide](docs/getting-started.md) has pictures of each step.
 
 ## How it works
 

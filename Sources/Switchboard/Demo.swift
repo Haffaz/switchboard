@@ -65,16 +65,27 @@ enum Demo {
                 accountMenu.popUp(positioning: nil, at: point, in: nil)
             }
         }
-        let sharingMenu = controller.builtSharingMenu()
-        failures += shoot(output.appendingPathComponent("sharing-menu.png"), dismiss: { sharingMenu.cancelTracking() }) {
-            sharingMenu.popUp(positioning: nil, at: point, in: nil)
-        }
         failures += shoot(output.appendingPathComponent("add-account.png"), dismiss: { NSApp.abortModal() }) {
             _ = Dialogs.askNewAccountName(taken: { _ in false })
         }
         failures += shoot(output.appendingPathComponent("rename.png"), dismiss: { NSApp.abortModal() }) {
             _ = Dialogs.askRename(current: "Default", original: "Default")
         }
+        Actions.versionOverride = (try? String(contentsOfFile: "release.env", encoding: .utf8))
+            .flatMap { $0.split(separator: "\n").first { $0.hasPrefix("VERSION=") } }
+            .map { $0.dropFirst("VERSION=".count).trimmingCharacters(in: CharacterSet(charactersIn: "\"")) }
+        let settings = SettingsWindow.shared
+        settings.model.loadDemo(sharingOn: [.connectors], status: [
+            .history: "", .connectors: "3 MCP servers in the default account",
+            .extensions: "4 extensions in the default account",
+        ])
+        settings.model.selected = "work"
+        for tab in SettingsModel.Tab.allCases {
+            settings.show(tab)
+            RunLoop.main.run(until: Date().addingTimeInterval(settleTime))
+            if !capture(to: output.appendingPathComponent("settings-\(tab.rawValue.lowercased()).png")) { failures += 1 }
+        }
+        settings.window?.close()
         return failures
     }
 

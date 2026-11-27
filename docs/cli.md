@@ -6,7 +6,7 @@
 
 If you installed Switchboard with Homebrew, `cprof` is already on your `PATH`.
 
-Otherwise, in the Switchboard menu, choose **Install Command Line Tool**. That links `cprof` into `~/.local/bin`.
+Otherwise, open **Settings → General** and click **Install** next to Command line tool. That links `cprof` into `~/.local/bin`.
 
 Or link it yourself:
 
@@ -148,7 +148,7 @@ cprof share connectors on
 
 ### `cprof sync`
 
-Applies sharing now. Use it after adding a connector in Default, to copy it to the other accounts without waiting. Opening the Switchboard menu does the same.
+Applies sharing now. Use it after adding a connector in Default, to copy it to the other accounts without waiting. Opening the Switchboard menu or Settings does the same.
 
 ## Folders and shells
 

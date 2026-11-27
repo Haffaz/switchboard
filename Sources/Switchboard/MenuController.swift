@@ -1,21 +1,19 @@
 import AppKit
-import ServiceManagement
 import SwitchboardCore
 
-/// The menu bar menu, built only from standard macOS menu items. It draws
-/// at once from the last known accounts, then refreshes in the background.
+/// The menu bar menu: only what is used many times a day. Everything rare,
+/// or that needs explaining, lives in the Settings window.
 ///
-///   ● [icon] Default            ▸   one row per account; ● = Desktop running.
-///     [icon] work               ▸   Its side menu holds every action for it.
-///     [icon] side      Sign In  ▸   Clicking a row opens its Claude Desktop.
-///   ───
+///   ● [icon] Work               ▸   Open Claude Desktop      ⌘1
+///     [icon] Personal           ▸   Open Claude Code        ⇧⌘1
+///     [icon] Side      Sign In  ▸   Open Terminal
+///   ───                             Quit Claude Desktop      (while running)
 ///   Add Account…           ⌘N
-///   Quit All Claude Desktops        (only while two or more are running)
-///   ───
-///   Open at Login
-///   Install Command Line Tool       (only until it is installed)
-///   Help
+///   Settings…              ⌘,
 ///   Quit Switchboard       ⌘Q
+///
+/// It draws at once from the last known accounts, then refreshes in the
+/// background and redraws if anything changed.
 @MainActor
 final class MenuController: NSObject, NSMenuDelegate {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -25,8 +23,7 @@ final class MenuController: NSObject, NSMenuDelegate {
     override init() {
         super.init()
         statusItem.button?.image = MenuItems.barIcon()
-        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-        statusItem.button?.toolTip = version.map { "Switchboard \($0)" } ?? "Switchboard"
+        statusItem.button?.toolTip = "Switchboard \(Actions.version)"
         menu.delegate = self
         menu.autoenablesItems = false
         statusItem.menu = menu
@@ -34,7 +31,6 @@ final class MenuController: NSObject, NSMenuDelegate {
 
     /// For demo mode: the menu, freshly built, and one account's side menu.
     func builtMenu() -> NSMenu { build(); return menu }
-    func builtSharingMenu() -> NSMenu { sharingMenu() }
     func builtAccountMenu(_ name: String) -> NSMenu? {
         build()
         return menu.items.first { ($0.representedObject as? String) == name }?.submenu
@@ -48,54 +44,18 @@ final class MenuController: NSObject, NSMenuDelegate {
     private func build() {
         menu.removeAllItems()
         let profiles = store.profiles
-        if profiles.isEmpty {
-            menu.addItem(MenuItems.disabled("Loading…"))
-        }
+        if profiles.isEmpty { menu.addItem(MenuItems.disabled("Loading…")) }
         let running = store.runningNames()
         for (index, profile) in profiles.enumerated() {
             menu.addItem(accountRow(profile, running: running.contains(profile.name),
                                     key: index < 9 ? "\(index + 1)" : ""))
         }
-
         menu.addItem(.separator())
         menu.addItem(item("Add Account…", #selector(addAccount), key: "n"))
-        if running.count > 1 { menu.addItem(item("Quit All Claude Desktops", #selector(quitAllClaude))) }
-        let sharing = NSMenuItem(title: "Sharing", action: nil, keyEquivalent: "")
-        sharing.submenu = sharingMenu()
-        menu.addItem(sharing)
-
+        menu.addItem(item("Settings…", #selector(openSettings), key: ","))
         menu.addItem(.separator())
-        let login = item("Open at Login", #selector(toggleLoginItem))
-        login.state = SMAppService.mainApp.status == .enabled ? .on : .off
-        menu.addItem(login)
-        if !Self.commandLineToolInstalled {
-            menu.addItem(item("Install Command Line Tool", #selector(installCLI)))
-        }
-        // Help opens the guide. Holding ⌥ turns it into Show Log, which is
-        // only needed when something has gone wrong.
-        menu.addItem(item("Help", #selector(showHelp)))
-        let log = item("Show Log", #selector(showLog))
-        log.keyEquivalentModifierMask = [.option]
-        log.isAlternate = true
-        menu.addItem(log)
         menu.addItem(item("Quit Switchboard", #selector(quit), key: "q"))
     }
-
-    /// The cprof program shipped inside this app.
-    private static var bundledCprof: URL {
-        (Bundle.main.executableURL ?? Bundle.main.bundleURL).deletingLastPathComponent().appendingPathComponent("cprof")
-    }
-
-    private static var cprofLink: URL {
-        URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".local/bin/cprof")
-    }
-
-    /// True when ~/.local/bin/cprof points at this app's copy.
-    private static var commandLineToolInstalled: Bool {
-        cprofLink.resolvingSymlinksInPath().path == bundledCprof.resolvingSymlinksInPath().path
-    }
-
-    // MARK: - Accounts
 
     /// One account: its icon and name, a green dot while its Claude Desktop
     /// runs, and a "Sign In" badge until Desktop is signed in.
@@ -113,9 +73,6 @@ final class MenuController: NSObject, NSMenuDelegate {
     private func accountMenu(_ profile: Profile, running: Bool, key: String) -> NSMenu {
         let sub = NSMenu()
         sub.autoenablesItems = false
-        sub.addItem(MenuItems.disabled(profile.codeSignedIn ? profile.email : "Claude Code not signed in"))
-        sub.addItem(.separator())
-
         sub.addItem(item(profile.needsDesktopSignIn ? "Sign In to Claude Desktop…" : "Open Claude Desktop",
                          #selector(openDesktop(_:)), profile, key: key))
         let code = item(profile.codeSignedIn ? "Open Claude Code" : "Sign In to Claude Code…",
@@ -123,67 +80,10 @@ final class MenuController: NSObject, NSMenuDelegate {
         code.keyEquivalentModifierMask = [.command, .shift]
         sub.addItem(code)
         sub.addItem(item("Open Terminal", #selector(openTerminal(_:)), profile))
-
         if running {
             sub.addItem(.separator())
             sub.addItem(item("Quit Claude Desktop", #selector(quitClaude(_:)), profile))
         }
-
-        sub.addItem(.separator())
-        sub.addItem(item("Rename…", #selector(rename(_:)), profile))
-        let icon = NSMenuItem(title: "Icon", action: nil, keyEquivalent: "")
-        icon.submenu = iconMenu(profile)
-        sub.addItem(icon)
-        if !profile.isDefault && profile.desktopSignedIn {
-            sub.addItem(item("Sign In to Claude Desktop Again…", #selector(signInDesktop(_:)), profile))
-        }
-        if profile.codeSignedIn {
-            sub.addItem(item("Sign In to Claude Code Again…", #selector(signInCode(_:)), profile))
-        }
-        if !profile.isDefault { sub.addItem(item("Add Dock Icon", #selector(makeDockApp(_:)), profile)) }
-        sub.addItem(item("Show Files in Finder", #selector(reveal(_:)), profile))
-
-        if !profile.isDefault {
-            sub.addItem(.separator())
-            sub.addItem(item("Remove Account…", #selector(remove(_:)), profile))
-        }
-        return sub
-    }
-
-    /// What accounts share. The first line is always on; the rest are switches.
-    private func sharingMenu() -> NSMenu {
-        let sub = NSMenu()
-        sub.autoenablesItems = false
-        let always = MenuItems.disabled("Rules, Skills, Plugins and Settings")
-        always.state = .on
-        sub.addItem(always)
-        sub.addItem(.separator())
-        let on = Sharing(store: accounts).enabled()
-        for thing in SharedThing.allCases {
-            let entry = item(thing.title, #selector(toggleSharing(_:)))
-            entry.identifier = NSUserInterfaceItemIdentifier(thing.rawValue)
-            entry.state = on.contains(thing) ? .on : .off
-            entry.toolTip = thing.summary
-            sub.addItem(entry)
-        }
-        return sub
-    }
-
-    private func iconMenu(_ profile: Profile) -> NSMenu {
-        let sub = NSMenu()
-        sub.autoenablesItems = false
-        for choice in AccountIcon.choices {
-            let entry = item(choice.label, #selector(setIcon(_:)), profile)
-            entry.image = MenuItems.symbol(choice.symbol)
-            entry.identifier = NSUserInterfaceItemIdentifier(choice.symbol)
-            entry.state = profile.icon == choice.symbol ? .on : .off
-            sub.addItem(entry)
-        }
-        sub.addItem(.separator())
-        let none = item("None", #selector(setIcon(_:)), profile)
-        none.identifier = NSUserInterfaceItemIdentifier("")
-        none.state = (profile.icon ?? "").isEmpty ? .on : .off
-        sub.addItem(none)
         return sub
     }
 
@@ -202,192 +102,23 @@ final class MenuController: NSObject, NSMenuDelegate {
         (sender.representedObject as? String).flatMap(store.profile(named:))
     }
 
-    private let accounts = AccountStore()
-
-    /// Do some work on the accounts; show any error in plain words, then
-    /// reload the menu's copy. Returns false if it failed.
-    @discardableResult
-    private func perform(_ work: @Sendable @escaping () throws -> Void) async -> Bool {
-        do {
-            try await Task.detached(operation: work).value
-            await store.refresh(recheckLogins: true)
-            return true
-        } catch {
-            Dialogs.error(error.localizedDescription.prefix(1).uppercased() + error.localizedDescription.dropFirst())
-            return false
-        }
-    }
-
     @objc private func openDesktop(_ sender: NSMenuItem) {
-        guard let profile = profile(sender) else { return }
-        Task {
-            if profile.needsDesktopSignIn { await DesktopSignIn.run(profile); return }
-            do { try await ClaudeDesktop.open(profile) } catch { Dialogs.error(error.localizedDescription) }
-        }
+        if let profile = profile(sender) { Task { await Actions.openDesktop(profile) } }
     }
 
     @objc private func openCode(_ sender: NSMenuItem) {
-        guard let profile = profile(sender) else { return }
-        openTerminal(profile, profile.codeSignedIn ? .claudeCode : .signIn)
-    }
-
-    private func openTerminal(_ profile: Profile, _ mode: TerminalLauncher.Mode) {
-        let accounts = accounts
-        Task { await perform { try TerminalLauncher.open(profile.name, mode: mode, store: accounts) } }
-    }
-
-    @objc private func rename(_ sender: NSMenuItem) {
-        guard let profile = profile(sender) else { return }
-        let original = profile.isDefault ? "Default" : profile.name
-        guard let label = Dialogs.askRename(current: profile.displayName, original: original) else { return }
-        let accounts = accounts
-        // Typing the original name back is the same as clearing the label.
-        Task { await perform { try accounts.setLabel(profile.name, to: label == original ? nil : label) } }
-    }
-
-    @objc private func toggleSharing(_ sender: NSMenuItem) {
-        guard let raw = sender.identifier?.rawValue, let thing = SharedThing(rawValue: raw) else { return }
-        let accounts = accounts
-        let turnOn = sender.state != .on
-        // History is the one that moves files, so it is the one that asks.
-        if turnOn, thing == .history,
-           !Dialogs.confirm("Share Claude Code history?", "Every account's sessions go into one folder.", button: "Share") {
-            return
-        }
-        Task {
-            let notes = Box<[String]>([])
-            guard await perform({ notes.value = try Sharing(store: accounts).set(thing, on: turnOn) }) else { return }
-            Log.write("sharing: \(thing.rawValue) \(turnOn ? "on" : "off")")
-            if !notes.value.isEmpty { Dialogs.info("Some history was kept aside", notes.value.joined(separator: "\n")) }
-        }
-    }
-
-    @objc private func setIcon(_ sender: NSMenuItem) {
-        guard let profile = profile(sender), let symbol = sender.identifier?.rawValue else { return }
-        let accounts = accounts
-        Task { await perform { try accounts.setIcon(profile.name, to: symbol) } }
-    }
-
-    @objc private func signInDesktop(_ sender: NSMenuItem) {
-        guard let profile = profile(sender) else { return }
-        Task { await DesktopSignIn.run(profile) }
-    }
-
-    @objc private func quitClaude(_ sender: NSMenuItem) {
-        guard let profile = profile(sender) else { return }
-        Task { await quit(profile) }
-    }
-
-    @objc private func quitAllClaude() {
-        let running = store.profiles.filter { ClaudeDesktop.running($0) != nil }
-        Task { for profile in running { await quit(profile) } }
-    }
-
-    private func quit(_ profile: Profile) async {
-        Log.write("quit \(profile.name): asked")
-        if await ClaudeDesktop.quit(profile) { return }
-        // Claude can refuse to quit while work is running.
-        if Dialogs.confirmForceQuit(profile.displayName) {
-            ClaudeDesktop.forceQuit(profile)
-            Log.write("quit \(profile.name): forced")
-        }
+        if let profile = profile(sender) { Task { await Actions.openCode(profile) } }
     }
 
     @objc private func openTerminal(_ sender: NSMenuItem) {
-        if let profile = profile(sender) { openTerminal(profile, .shell) }
+        if let profile = profile(sender) { Task { await Actions.openTerminal(profile, .shell) } }
     }
 
-    @objc private func signInCode(_ sender: NSMenuItem) {
-        if let profile = profile(sender) { openTerminal(profile, .signIn) }
+    @objc private func quitClaude(_ sender: NSMenuItem) {
+        if let profile = profile(sender) { Task { await Actions.quit(profile) } }
     }
 
-    @objc private func makeDockApp(_ sender: NSMenuItem) {
-        guard let profile = profile(sender) else { return }
-        let accounts = accounts, cprof = Self.bundledCprof, claude = ClaudeDesktop.appURL
-        Task {
-            guard await perform({ try DockLauncher.make(profile.name, cprof: cprof, claudeApp: claude, store: accounts) })
-            else { return }
-            let app = accounts.paths.home.appendingPathComponent("Applications/Claude (\(profile.name)).app")
-            NSWorkspace.shared.activateFileViewerSelecting([app])
-            Dialogs.info("Drag “Claude (\(profile.name))” to your Dock")
-        }
-    }
-
-    @objc private func reveal(_ sender: NSMenuItem) {
-        guard let profile = profile(sender) else { return }
-        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: profile.cliDir)])
-    }
-
-    @objc private func remove(_ sender: NSMenuItem) {
-        guard let profile = profile(sender), Dialogs.confirmRemove(profile.displayName) else { return }
-        Task {
-            guard await ClaudeDesktop.quit(profile) else {
-                Dialogs.error("Quit Claude for “\(profile.displayName)” first.")
-                return
-            }
-            let accounts = accounts
-            // Signing out removes the Keychain entry; it can take a moment.
-            let signedOut = await Task.detached {
-                !profile.codeSignedIn || ClaudeCode.signOut(configDir: accounts.cliDir(profile.name))
-            }.value
-            guard await perform({ try accounts.remove(profile.name) }) else { return }
-            // Say something only if a step did not work.
-            if !signedOut {
-                Dialogs.info("Removed, but still signed in to Claude Code",
-                             "To finish, delete the newest “Claude Code-credentials” entry in Keychain Access.")
-            }
-        }
-    }
-
-    /// One question (the name), then straight to signing in. Claude Code
-    /// signs in later, the first time it is opened for this account.
-    @objc private func addAccount() {
-        let accounts = accounts
-        guard let typed = Dialogs.askNewAccountName(taken: { accounts.exists($0) }) else { return }
-        Task {
-            guard await perform({ try accounts.create(typed); try Sharing(store: accounts).apply() }),
-                  let name = ProfileName.slug(typed), let profile = store.profile(named: name) else { return }
-            await DesktopSignIn.run(profile)
-        }
-    }
-
-    @objc private func installCLI() {
-        let link = Self.cprofLink, target = Self.bundledCprof
-        Task {
-            let done = await perform {
-                let fm = FileManager.default
-                try fm.createDirectory(at: link.deletingLastPathComponent(), withIntermediateDirectories: true)
-                try? fm.removeItem(at: link)
-                try fm.createSymbolicLink(at: link, withDestinationURL: target)
-            }
-            guard done else { return }
-            Dialogs.info("cprof is installed", "Run it in any terminal.")
-        }
-    }
-
-    @objc private func toggleLoginItem() {
-        do {
-            if SMAppService.mainApp.status == .enabled { try SMAppService.mainApp.unregister() }
-            else { try SMAppService.mainApp.register() }
-        } catch {
-            Dialogs.error("Move Switchboard to your Applications folder, then try again.")
-        }
-    }
-
-    @objc private func showHelp() {
-        if let url = Dialogs.guideURL { NSWorkspace.shared.open(url) }
-    }
-
-    @objc private func showLog() {
-        Log.write("log opened")
-        NSWorkspace.shared.open(Log.fileURL)
-    }
-
+    @objc private func addAccount() { Task { await Actions.addAccount() } }
+    @objc private func openSettings() { SettingsWindow.shared.show() }
     @objc private func quit() { NSApp.terminate(nil) }
-}
-
-/// Carries a value out of work done on another thread.
-private final class Box<Value>: @unchecked Sendable {
-    var value: Value
-    init(_ value: Value) { self.value = value }
 }

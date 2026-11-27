@@ -15,8 +15,8 @@ Open an issue on GitHub and include:
 
 1. What you did, step by step.
 2. What you expected, and what happened.
-3. Your macOS version and your Switchboard version. Rest the pointer on the menu bar icon to see the version.
-4. The relevant lines of the log. Open the menu, hold **Option (⌥)** and choose **Show Log**. The log never contains sign-in codes or passwords, but read it before you paste it.
+3. Your macOS version and your Switchboard version. The version is in **Settings → General**.
+4. The relevant lines of the log. Open **Settings → General** and click **Show Log**. The log never contains sign-in codes or passwords, but read it before you paste it.
 
 Please check [Troubleshooting](docs/troubleshooting.md) first. Your problem may already have a fix there.
 

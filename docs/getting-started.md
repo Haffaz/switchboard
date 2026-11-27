@@ -39,7 +39,7 @@ cd switchboard && ./build.sh --install
 
 Open Switchboard from Applications if it is not already running. A two-cog icon appears in your menu bar.
 
-To have it there after every restart, click the icon and choose **Open at Login**.
+To have it there after every restart, open **Settings…** from the menu and switch on **Open at login** in the General tab.
 
 ## 2. Add an account
 
@@ -62,39 +62,51 @@ Your other Claude windows stay open and signed in. When the new window shows you
 ## 4. Everyday use
 
 <p align="center">
-  <img src="images/menu.png" width="372" alt="The Switchboard menu with four accounts">
-  <img src="images/account-menu.png" width="352" alt="One account's menu">
+  <img src="images/menu.png" width="320" alt="The Switchboard menu with four accounts">
+  <img src="images/account-menu.png" width="276" alt="One account's menu: Open Claude Desktop, Open Claude Code, Open Terminal, Quit Claude Desktop">
 </p>
 
+The menu holds only what you use every day.
+
 - **Click an account** to open its Claude Desktop. If it is already running, its window comes to the front.
-- **Point at an account** to see everything it can do: open Claude Code, open a Terminal, quit, and more.
+- **Point at an account** for Claude Code, a Terminal set to that account, and Quit.
 - A **green dot** means that account's Claude Desktop is running.
 - A **Sign In** badge means Claude Desktop is not signed in for that account yet.
 - While the menu is open, **⌘1, ⌘2…** open Claude Desktop for the first nine accounts, and **⇧⌘1, ⇧⌘2…** open Claude Code.
 
-### Quitting an account
+Closing a Claude window does not quit that Claude. It keeps running in the background, like any Mac app. To stop one, point at the account and choose **Quit Claude Desktop**.
 
-Closing a Claude window does not quit that Claude. It keeps running in the background, like any Mac app. With several copies that look the same, that is easy to miss.
+## 5. Settings
 
-To stop one, point at the account and choose **Quit Claude Desktop**. When two or more are running, **Quit All Claude Desktops** appears in the main menu.
+Choose **Settings…** in the menu, or press **⌘,** while it is open. Everything that you do now and then lives here.
 
-### Renaming an account
+### Accounts
 
-Point at an account and choose **Rename…** to change the name shown in the menu. This works for every account, including Default.
+<p align="center"><img src="images/settings-accounts.png" width="560" alt="Settings, Accounts tab: a list of accounts on the left; on the right the selected account's name, icon, sign-in status for Claude Desktop and Claude Code, and buttons for Dock icon, Show Files and Remove"></p>
 
-<p align="center"><img src="images/rename.png" width="328" alt="The Rename dialog: one text field holding the current name"></p>
+Pick an account on the left to:
 
-Renaming changes only what you see. Sign-ins, chat history and files stay where they are. Clear the field to go back to the original name.
+- **Rename it.** Type a new name and press Return. This works for Default too. Only the shown name changes; sign-ins, history and files stay where they are. Clear the field to go back to the original name.
+- **Give it an icon,** so you can find it by shape in the menu.
+- **See and redo its sign-ins** for Claude Desktop and Claude Code.
+- **Add a Dock icon** that opens that account's Claude Desktop.
+- **Remove it** with **Remove Account…**, or with **−** under the list.
 
-### Telling accounts apart
+**+** under the list adds an account, the same as **Add Account…** in the menu.
 
-Give each account its own icon: point at the account, then **Icon**, and pick one. The icon shows next to the account's name in the menu.
+### Sharing
 
-For a Dock icon that opens one account's Claude Desktop, choose **Add Dock Icon** in the account's menu, then drag the new app to your Dock.
+See [What is shared between accounts](#what-is-shared-between-accounts) below.
 
-## 5. Optional: use it from the terminal
+### General
 
-If you installed with Homebrew, `cprof` is already available. Otherwise choose **Install Command Line Tool** in the menu. You can then run `cprof` in any terminal:
+<p align="center"><img src="images/settings-general.png" width="560" alt="Settings, General tab: Open at login, Command line tool, Help with Open Guide and Show Log, and Version"></p>
+
+Open at login, the command line tool, the guide, the log, and the version you are running.
+
+## 6. Optional: use it from the terminal
+
+If you installed with Homebrew, `cprof` is already available. Otherwise open **Settings → General** and click **Install** next to Command line tool. You can then run `cprof` in any terminal:
 
 ```bash
 cprof list
@@ -122,20 +134,20 @@ Each account keeps its own sign-in, chat history, projects and MCP servers.
 
 ### Sharing more
 
-<p align="center"><img src="images/sharing-menu.png" width="306" alt="The Sharing menu: Rules, Skills, Plugins and Settings ticked, then three switches for Claude Code History, Claude Code Connectors and Desktop Extensions"></p>
+<p align="center"><img src="images/settings-sharing.png" width="560" alt="Settings, Sharing tab: rules, skills, plugins and settings always on; switches for Claude Code history, Claude Code connectors and Desktop extensions"></p>
 
-Under **Sharing** in the menu, three switches share more between accounts. All are off to begin with.
+In **Settings → Sharing**, three switches share more between accounts. All are off to begin with.
 
 - **Claude Code History** lets you resume any account's Claude Code sessions from any other account.
 - **Claude Code Connectors** copies the MCP servers you added in Default to the other accounts.
 - **Desktop Extensions** copies the extensions installed in Default's Claude Desktop to the other accounts, each time their Claude Desktop starts.
 
-Default is always the source: add a connector or install an extension there.
+Default is always the source: add a connector or install an extension there. Each switch shows how much there is to share.
 
 Conversations in Claude Desktop, and connectors such as Gmail or Slack, belong to one Claude account on Anthropic's servers and cannot be shared. [How it works](how-it-works.md#optional-sharing) has the details.
 
 ## Removing an account
 
-Point at the account and choose **Remove Account…**. This signs it out of Claude Code and deletes its chat history and settings on this Mac. Your Claude account itself is not affected.
+Open **Settings → Accounts**, pick the account and click **Remove Account…**. This signs it out of Claude Code and deletes its chat history and settings on this Mac. Your Claude account itself is not affected.
 
 Something not working? See [Troubleshooting](troubleshooting.md).

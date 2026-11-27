@@ -21,6 +21,8 @@ final class ProfileStore {
     /// these names count as running. Nothing is read from disk.
     private(set) var demoRunning: Set<String>?
 
+    var isDemo: Bool { demoRunning != nil }
+
     func profile(named name: String) -> Profile? { profiles.first { $0.name == name } }
 
     func loadDemo(_ sample: [Profile], running: Set<String>) {

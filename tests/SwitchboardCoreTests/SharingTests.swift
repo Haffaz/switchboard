@@ -41,6 +41,42 @@ struct SharingSettingsTests {
     }
 }
 
+@Suite("Sharing status lines")
+struct SharingStatusTests {
+    @Test("Each line says how much there is to share, with correct plurals")
+    func lines() throws {
+        let box = try Sandbox()
+        #expect(box.sharing.statusLine(.history).isEmpty)
+        #expect(box.sharing.statusLine(.connectors) == "No MCP servers in the default account yet")
+        #expect(box.sharing.statusLine(.extensions) == "No extensions in the default account yet")
+
+        try box.write(#"{"mcpServers":{"a":{}}}"#, to: box.store.paths.defaultCLIJSON)
+        try box.write("x", to: box.defaultDesktop.appendingPathComponent("Claude Extensions/one/a.js"))
+        try box.write("x", to: box.defaultDesktop.appendingPathComponent("Claude Extensions/two/a.js"))
+        try box.write("x", to: box.defaultDesktop.appendingPathComponent("Claude Extensions/.DS_Store"))
+        #expect(box.sharing.statusLine(.connectors) == "1 MCP server in the default account")
+        #expect(box.sharing.statusLine(.extensions) == "2 extensions in the default account")
+    }
+
+    @Test("Descriptions name the account things are shared from")
+    func summaries() {
+        #expect(SharedThing.connectors.summary(source: "Personal") == "MCP servers added in Personal are copied to the other accounts.")
+        #expect(SharedThing.connectors.summary == SharedThing.connectors.summary(source: "Default"))
+    }
+
+    @Test("History reports how many accounts are linked")
+    func history() throws {
+        let box = try Sandbox()
+        try box.write("s", to: box.defaultCLI.appendingPathComponent("projects/-r/a.jsonl"))
+        try box.store.add("work")
+        try box.sharing.set(.history, on: true)
+        #expect(box.sharing.statusLine(.history) == "Shared with 1 account")
+        try box.store.add("home")
+        try box.sharing.apply()
+        #expect(box.sharing.statusLine(.history) == "Shared with 2 accounts")
+    }
+}
+
 @Suite("Sharing Claude Code history")
 struct SharedHistoryTests {
     @Test("Other accounts link to the default account's history folders")

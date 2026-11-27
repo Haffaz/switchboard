@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Start with the log. Open the Switchboard menu, hold **Option (⌥)**, and choose **Show Log** (it takes the place of Help). It records each step of a sign-in and each quit, with times. It never contains sign-in codes.
+Start with the log. Open **Settings → General** and click **Show Log**. It records each step of a sign-in and each quit, with times. It never contains sign-in codes.
 
 The log file is `~/Library/Logs/Switchboard.log`.
 
@@ -40,7 +40,7 @@ Switchboard asks Claude Code about its sign-in at most every 10 seconds. Close t
 
 ### A new account has no MCP servers
 
-MCP servers are per account unless you share them. Switch on **Sharing → Claude Code Connectors**, and the servers you added in Default are copied to the other accounts. A copied server may still ask you to sign in once per account.
+MCP servers are per account unless you share them. Switch on **Settings → Sharing → Claude Code Connectors**, and the servers you added in Default are copied to the other accounts. A copied server may still ask you to sign in once per account.
 
 ### A connector I added does not show up in another account
 
@@ -48,7 +48,7 @@ Connectors are copied from Default only. Add it while using the Default account,
 
 ### Extensions are missing in another account's Claude Desktop
 
-Switch on **Sharing → Desktop Extensions**, then quit and reopen that account's Claude Desktop. Extensions are copied only when its Claude Desktop starts, never while it is running.
+Switch on **Settings → Sharing → Desktop Extensions**, then quit and reopen that account's Claude Desktop. Extensions are copied only when its Claude Desktop starts, never while it is running.
 
 ### Sessions are missing after I switched Claude Code History on
 
@@ -88,15 +88,15 @@ Install Claude Code from [claude.com/claude-code](https://claude.com/claude-code
 
 ## The app itself
 
-### "Open at Login" shows an error
+### "Open at login" shows an error
 
 Switchboard must be in `/Applications` for this to work. Move it there, open it, and try again.
 
 ### `cprof` is "command not found"
 
-Choose **Install Command Line Tool** in the menu. If it is still not found, add `~/.local/bin` to your `PATH`.
+Open **Settings → General** and click **Install** next to Command line tool. If it is still not found, add `~/.local/bin` to your `PATH`.
 
-If the menu item is there even though you installed the tool before, the old link points to a previous version. Choosing it again repairs the link.
+If Settings offers **Install** even though you installed the tool before, the old link points to a previous version. Installing again repairs the link.
 
 ### The Dock or Finder shows an old icon
 
@@ -104,7 +104,7 @@ macOS caches app icons. Log out and back in to refresh it.
 
 ## Uninstalling
 
-1. For each account you added, choose **Remove Account…** in its menu. This signs it out of Claude Code and deletes its data.
+1. In **Settings → Accounts**, remove each account you added with **Remove Account…**. This signs it out of Claude Code and deletes its data.
 2. Quit Switchboard and delete `/Applications/Switchboard.app`. If you installed with Homebrew, run `brew uninstall --cask switchboard` instead.
 3. Delete what is left:
 
@@ -119,4 +119,4 @@ Your Default account, in `~/.claude` and Claude Desktop's own data folder, is un
 
 ## Still stuck?
 
-Open an issue on GitHub. Include your macOS version, your Switchboard version (rest the pointer on the menu bar icon to see it), and the relevant lines of the log.
+Open an issue on GitHub. Include your macOS version, your Switchboard version (in **Settings → General**), and the relevant lines of the log.

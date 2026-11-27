@@ -18,11 +18,14 @@ public enum SharedThing: String, CaseIterable, Codable, Sendable {
         }
     }
 
-    public var summary: String {
+    public var summary: String { summary(source: "Default") }
+
+    /// What it does, naming the account things are shared from.
+    public func summary(source: String) -> String {
         switch self {
         case .history: return "Resume any account's Claude Code sessions from any other account."
-        case .connectors: return "MCP servers added in Default are copied to the other accounts."
-        case .extensions: return "Extensions installed in Default's Claude Desktop are copied to the other accounts."
+        case .connectors: return "MCP servers added in \(source) are copied to the other accounts."
+        case .extensions: return "Extensions installed in \(source)'s Claude Desktop are copied to the other accounts."
         }
     }
 }
@@ -85,6 +88,35 @@ public struct Sharing: Sendable {
             if things.contains(.connectors) { try syncConnectors(name) }
         }
         return notes
+    }
+
+    // MARK: - Status
+
+    /// A short, current fact about one kind of sharing, for showing next to
+    /// its switch: how much there is to share, or how far it has reached.
+    public func statusLine(_ thing: SharedThing) -> String {
+        let others = otherAccounts
+        switch thing {
+        case .history:
+            guard isOn(.history) else { return "" }
+            let linked = others.filter { name in
+                Self.historyFolders.contains { isLink(store.cliDir(name).appendingPathComponent($0)) }
+            }.count
+            return "Shared with \(Self.count(linked, "account"))"
+        case .connectors:
+            let servers = (Self.object(paths.defaultCLIJSON)?[Self.serversKey] as? [String: Any])?.count ?? 0
+            return servers == 0 ? "No MCP servers in the default account yet"
+                                : "\(Self.count(servers, "MCP server")) in the default account"
+        case .extensions:
+            let folder = paths.defaultDesktopDir.appendingPathComponent("Claude Extensions")
+            let installed = ((try? fm.contentsOfDirectory(atPath: folder.path)) ?? []).filter { !$0.hasPrefix(".") }.count
+            return installed == 0 ? "No extensions in the default account yet"
+                                  : "\(Self.count(installed, "extension")) in the default account"
+        }
+    }
+
+    static func count(_ number: Int, _ noun: String) -> String {
+        "\(number) \(noun)\(number == 1 ? "" : "s")"
     }
 
     // MARK: - Claude Code history
