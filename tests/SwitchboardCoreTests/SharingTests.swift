@@ -86,6 +86,43 @@ struct SharingPlanTests {
     }
 }
 
+@Suite("Same as Default")
+struct SameAsDefaultTests {
+    @Test("One switch shares all three with the default account, and switches them all off")
+    func allThree() throws {
+        let box = try Sandbox()
+        try box.write("s1", to: box.defaultCLI.appendingPathComponent("projects/-repo/one.jsonl"))
+        try box.store.add("work")
+        #expect(!box.sharing.isSameAsDefault("work"))
+
+        try box.sharing.setSameAsDefault("work", true)
+        #expect(box.sharing.isSameAsDefault("work"))
+        for thing in SharedThing.allCases { #expect(box.sharing.source(thing, for: "work") == "default") }
+        #expect(box.linkTarget(box.projects("work")) == box.defaultCLI.appendingPathComponent("projects").path)
+
+        try box.sharing.setSameAsDefault("work", false)
+        #expect(box.sharing.sources()["work"] == nil)
+        #expect(!box.exists(box.projects("work")))
+        #expect(box.read(box.defaultCLI.appendingPathComponent("projects/-repo/one.jsonl")) == "s1")
+    }
+
+    @Test("Changing one thing afterwards means it is no longer the same as Default")
+    func partly() throws {
+        let box = try Sandbox()
+        try box.store.add("work"); try box.store.add("client")
+        try box.sharing.setSameAsDefault("work", true)
+        try box.sharing.setSource(.connectors, for: "work", to: "client")
+        #expect(!box.sharing.isSameAsDefault("work"))
+    }
+
+    @Test("Not for the default account itself")
+    func notForDefault() throws {
+        let box = try Sandbox()
+        #expect(throws: SwitchboardError.self) { try box.sharing.setSameAsDefault("default", true) }
+        #expect(!box.sharing.isSameAsDefault("default"))
+    }
+}
+
 @Suite("Sharing Claude Code history")
 struct SharedHistoryTests {
     @Test("An account links to its source's history folders")

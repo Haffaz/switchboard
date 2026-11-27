@@ -7,7 +7,7 @@ import SwitchboardCore
 @MainActor
 final class SettingsWindow: NSObject, NSWindowDelegate {
     static let shared = SettingsWindow()
-    static let size = NSSize(width: 660, height: 600)
+    static let size = NSSize(width: 660, height: 660)
 
     let model = SettingsModel()
     private(set) var window: NSWindow?
@@ -152,15 +152,25 @@ private struct AccountDetail: View {
                         }
                     }
                 } else {
-                    ForEach(SharedThing.allCases, id: \.self) { thing in
-                        LabeledContent(thing.title) {
-                            SourcePicker(model: model, profile: profile, thing: thing).frame(width: 150)
+                    Toggle(isOn: Binding(get: { model.isSameAsDefault(profile) },
+                                         set: { model.setSameAsDefault(profile, $0) })) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Same as Default")
+                            Text("Shares Default's Claude Code history, connectors and extensions, so you can continue on this account where Default left off.")
+                                .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                         }
-                        .help(thing.summary)
+                    }
+                    if !model.isSameAsDefault(profile) {
+                        ForEach(SharedThing.allCases, id: \.self) { thing in
+                            LabeledContent(thing.title) {
+                                SourcePicker(model: model, profile: profile, thing: thing).frame(width: 150)
+                            }
+                            .help(thing.summary)
+                        }
                     }
                 }
             } header: {
-                Text(profile.isDefault ? "Shared from this account" : "Share with")
+                Text(profile.isDefault ? "Shared from this account" : "Sharing")
             }
             Section {
                 HStack {

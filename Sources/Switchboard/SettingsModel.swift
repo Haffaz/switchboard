@@ -22,6 +22,12 @@ final class SettingsModel: ObservableObject {
     /// The accounts that can be given a source: all but the default one.
     var sharingAccounts: [Profile] { profiles.filter { !$0.isDefault } }
 
+    func isSameAsDefault(_ profile: Profile) -> Bool {
+        !profile.isDefault && SharedThing.allCases.allSatisfy { sources[profile.name]?[$0] == Profile.defaultName }
+    }
+
+    func setSameAsDefault(_ profile: Profile, _ on: Bool) { run { await Actions.setSameAsDefault(profile, on) } }
+
     func source(_ thing: SharedThing, for profile: Profile) -> Profile? {
         sources[profile.name]?[thing].flatMap { name in profiles.first { $0.name == name } }
     }

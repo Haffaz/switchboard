@@ -78,6 +78,7 @@ enum Demo {
         settings.model.loadDemo(sources: [
             "work": [.history: "default", .extensions: "default"],
             "client-acme": [.connectors: "work", .extensions: "work"],
+            "side-project": [.history: "default", .connectors: "default", .extensions: "default"],
         ])
         settings.model.selected = "work"
         for tab in SettingsModel.Tab.allCases {

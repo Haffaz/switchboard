@@ -13,12 +13,16 @@ struct CLI {
         Usage: cprof <command> [args]
 
           list [--json]          List accounts and who is signed in (the default command)
-          add <name>             Create an account; "add My Work" is shown as My Work, used as my-work
+          add <name> [--separate]
+                                 Create an account; "add My Work" is shown as My Work, used as my-work.
+                                 It shares history, connectors and extensions with Default unless --separate
           rm <name> [--yes]      Sign out and delete an account and its data
           rename <name> [label]  Change the name shown for an account; no label resets it
           icon <name> [symbol]   Set an account's menu icon (e.g. briefcase); no symbol clears it
 
           cli [name] [-- args]   Run `claude` as an account
+          continue <name> [-- args]
+                                 Continue this folder's latest Claude Code conversation as another account
           desktop [name]         Open Claude Desktop as an account
           code [name]            Open a Terminal window running Claude Code
           login [name]           Open a Terminal window that signs Claude Code in
@@ -51,6 +55,7 @@ struct CLI {
         case "rename": try rename(try name(args, usage: "cprof rename <name> [label]"), Array(args.dropFirst()))
         case "icon": try icon(try name(args, usage: "cprof icon <name> [symbol]"), args.count > 1 ? args[1] : nil)
         case "cli", "run": try runClaude(args)
+        case "continue": try continueAs(args)
         case "desktop": try await ClaudeDesktop.open(store.profile(try resolve(args.first)))
         case "code": try TerminalLauncher.open(try resolve(args.first), mode: .claudeCode, store: store)
         case "login": try TerminalLauncher.open(try resolve(args.first), mode: .signIn, store: store)
@@ -120,12 +125,23 @@ struct CLI {
 
     /// `cprof add Work Stuff` makes the account `work-stuff`, shown as "Work Stuff".
     private func add(_ words: [String]) throws {
-        guard !words.isEmpty, !words[0].hasPrefix("-") else { throw SwitchboardError("usage: cprof add <name>") }
-        let profile = try store.create(words.joined(separator: " "))
-        try Sharing(store: store).apply()  // a new account joins whatever is shared
+        let separate = words.contains("--separate")
+        let nameWords = words.filter { $0 != "--separate" }
+        guard !nameWords.isEmpty, !nameWords[0].hasPrefix("-") else {
+            throw SwitchboardError("usage: cprof add <name> [--separate]")
+        }
+        let profile = try store.create(nameWords.joined(separator: " "))
+        if separate {
+            try Sharing(store: store).apply()
+        } else {
+            try Sharing(store: store).setSameAsDefault(profile.name, true)
+        }
         let shown = profile.label.map { " (shown as \($0))" } ?? ""
+        let sharing = separate ? "It shares only rules, skills, plugins and settings."
+                               : "It shares history, connectors and extensions with default."
         print("""
-            Created \(profile.name)\(shown). Sign in with:
+            Created \(profile.name)\(shown). \(sharing)
+            Sign in with:
               cprof login \(profile.name)      (Claude Code)
               cprof desktop \(profile.name)    (Claude Desktop)
             """)
@@ -195,6 +211,26 @@ struct CLI {
         let argv: [UnsafeMutablePointer<CChar>?] = ([claude.path] + args).map { strdup($0) } + [nil]
         execv(claude.path, argv)
         throw SwitchboardError("could not start \(claude.path): \(String(cString: strerror(errno)))")
+    }
+
+    /// `cprof continue personal`: reopen this folder's most recent Claude Code
+    /// conversation, as another account. It only finds the conversation when
+    /// the two accounts share history, so say so when they do not.
+    private func continueAs(_ arguments: [String]) throws {
+        guard let target = arguments.first, !target.hasPrefix("-") else {
+            throw SwitchboardError("usage: cprof continue <name> [-- args]")
+        }
+        try store.require(target)
+        let sharing = Sharing(store: store)
+        let current = store.resolve(explicit: nil, environment: environment, cwd: cwd).name
+        if current != target, store.exists(current), sharing.historyRoot(of: target) != sharing.historyRoot(of: current) {
+            FileHandle.standardError.write(Data((
+                "cprof: \(target) does not share history with \(current), so this starts a new conversation.\n"
+                + "cprof: to share it: cprof share \(target) history \(sharing.historyRoot(of: current))\n").utf8))
+        }
+        var rest = Array(arguments.dropFirst())
+        if rest.first == "--" { rest.removeFirst() }
+        try runClaude([target, "--", "--continue"] + rest)
     }
 
     /// `cprof share` shows a table; `cprof share work history default` changes it.

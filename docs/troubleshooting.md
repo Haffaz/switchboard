@@ -50,6 +50,10 @@ Connectors are copied from the account chosen in **Settings → Sharing**, not f
 
 In **Settings → Sharing**, set that account's Extensions to the account that has them, then quit and reopen its Claude Desktop. Extensions are copied only when its Claude Desktop starts, never while it is running.
 
+### `cprof continue` starts a new conversation
+
+The account you continue on does not share history with the one you were using, so it cannot see that conversation. Run the command cprof prints, such as `cprof share personal history default`, or switch on **Same as Default** for that account.
+
 ### "That would share history in a loop"
 
 History can chain from one account to the next, but not back round to where it started. Pick an account further along the chain instead, or Default.

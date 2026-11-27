@@ -164,6 +164,36 @@ public struct Sharing: Sendable {
         return try apply()
     }
 
+    // MARK: - Same as Default
+
+    /// True when the account shares all three things with the default account.
+    public func isSameAsDefault(_ name: String) -> Bool {
+        guard name != Profile.defaultName, let things = sources()[name] else { return false }
+        return SharedThing.allCases.allSatisfy { things[$0] == Profile.defaultName }
+    }
+
+    /// Make an account share history, connectors and extensions with the
+    /// default account, or share none of them. The usual set-up when extra
+    /// accounts are there to keep working when another reaches its limit.
+    @discardableResult
+    public func setSameAsDefault(_ name: String, _ on: Bool) throws -> [String] {
+        try store.require(name)
+        guard name != Profile.defaultName else {
+            throw SwitchboardError("The default account is never changed, so it can only be shared from.")
+        }
+        var plan = loadPlan()
+        if on {
+            var things = plan.sources[name] ?? [:]
+            for thing in SharedThing.allCases { things[thing.rawValue] = Profile.defaultName }
+            plan.sources[name] = things
+        } else {
+            plan.sources[name] = nil
+        }
+        try save(plan)
+        if !on { unlinkHistory(name) }
+        return try apply()
+    }
+
     /// Forget an account that is being removed: its own sources, and every
     /// copy taken from it. History cannot be forgotten this way; callers must
     /// first check `historySharers(of:)`, because those accounts' sessions

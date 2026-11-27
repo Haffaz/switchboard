@@ -43,9 +43,9 @@ $ cprof list
 
 `--json` prints the same accounts for scripts, with these fields: `name`, `label`, `email`, `icon`, `desktopRunning`, `desktopSignedIn`, `cliDir`, `desktopDir`.
 
-### `cprof add <name>`
+### `cprof add <name> [--separate]`
 
-Creates an account: its folders, and links to your shared rules, agents, skills and settings.
+Creates an account: its folders, and links to your shared rules, agents, skills and settings. It also shares Default's Claude Code history, connectors and extensions, unless you pass `--separate`.
 
 ```bash
 cprof add work
@@ -55,7 +55,7 @@ You can type the name the way you want it shown. The account's own name is a tid
 
 ```
 $ cprof add My Work
-Created my-work (shown as My Work).
+Created my-work (shown as My Work). It shares history, connectors and extensions with default.
 ```
 
 ### `cprof rm <name> [--yes]`
@@ -99,6 +99,16 @@ cprof cli work
 ```bash
 cprof cli work -- --resume
 ```
+
+### `cprof continue <name> [-- args]`
+
+Opens the current folder's most recent Claude Code conversation as another account. It runs `claude --continue` as that account.
+
+```bash
+cprof continue personal
+```
+
+The conversation is only found if the two accounts share history. If they do not, cprof says so and Claude Code starts a new conversation.
 
 ### `cprof desktop [name]`
 

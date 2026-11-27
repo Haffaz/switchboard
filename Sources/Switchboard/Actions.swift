@@ -68,8 +68,12 @@ enum Actions {
         guard !store.isDemo else { return nil }
         let accounts = accounts
         guard let typed = Dialogs.askNewAccountName(taken: { accounts.exists($0) }) else { return nil }
-        guard await perform({ try accounts.create(typed); try Sharing(store: accounts).apply() }),
-              let name = ProfileName.slug(typed), let profile = store.profile(named: name) else { return nil }
+        // A new account starts the same as Default: shared history,
+        // connectors and extensions. It can be switched off in Settings.
+        guard await perform({
+            let profile = try accounts.create(typed)
+            try Sharing(store: accounts).setSameAsDefault(profile.name, true)
+        }), let name = ProfileName.slug(typed), let profile = store.profile(named: name) else { return nil }
         await DesktopSignIn.run(profile)
         return name
     }
@@ -153,6 +157,20 @@ enum Actions {
         else { return false }
         Log.write("sharing: \(target) \(thing.rawValue) \(from.map { "from \($0)" } ?? "off")")
         if !notes.value.isEmpty { Dialogs.info("Some history was kept aside", notes.value.joined(separator: "\n")) }
+        return true
+    }
+
+    /// Switch "Same as Default" for an account. Returns true if it changed.
+    @discardableResult
+    static func setSameAsDefault(_ profile: Profile, _ on: Bool) async -> Bool {
+        if on, !Dialogs.confirm("Make “\(profile.displayName)” the same as Default?",
+                                "Its Claude Code sessions join Default's, and Default's connectors and extensions are copied in.",
+                                button: "Make Same") {
+            return false
+        }
+        let accounts = accounts, name = profile.name
+        guard await perform({ try Sharing(store: accounts).setSameAsDefault(name, on) }) else { return false }
+        Log.write("sharing: \(name) same as default \(on ? "on" : "off")")
         return true
     }
 

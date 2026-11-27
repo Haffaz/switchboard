@@ -32,7 +32,9 @@ If you want one account to differ, replace its link with a real file inside `~/.
 
 ## Optional sharing
 
-Beyond the items above, an account can share three more things with another account. You choose, for each account and each thing, which account it shares with. Nothing is shared until you choose.
+Beyond the items above, an account can share three more things with another account. You choose, for each account and each thing, which account it shares with.
+
+A new account starts **Same as Default**: it shares all three with the Default account. Switch that off in Settings, or create the account with `cprof add <name> --separate`, and nothing more is shared until you choose.
 
 Make the choices in **Settings → Sharing**, on an account's page in **Settings → Accounts**, or with `cprof share`.
 

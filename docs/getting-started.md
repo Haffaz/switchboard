@@ -49,6 +49,8 @@ Click the menu bar icon and choose **Add Account…**.
 
 Type a name, such as "Work", and click **Add**. The name is kept exactly as you type it.
 
+A new account starts **Same as Default**: it shares your Default account's Claude Code history, connectors and extensions. You can switch that off on its page in Settings.
+
 ## 3. Sign in
 
 A new Claude window opens for the account right away. Sign in there with Google or email, as you normally would.
@@ -137,6 +139,8 @@ Each account keeps its own sign-in, chat history, projects and MCP servers.
 
 <p align="center"><img src="images/settings-sharing.png" width="560" alt="Settings, Sharing tab: a table with one row per account and a menu for History, Connectors and Extensions in each row"></p>
 
+Each account's page in **Settings → Accounts** has a **Same as Default** switch. When it is on, the account shares all three things below with Default. New accounts start with it on. Switch it off to choose each one yourself.
+
 In **Settings → Sharing**, pick for each account which other account it shares with:
 
 - **History:** the two accounts use one set of Claude Code sessions, so either can resume them.
@@ -145,7 +149,17 @@ In **Settings → Sharing**, pick for each account which other account it shares
 
 For example, set Client's Connectors to Work, and Client gets every MCP server you add in Work. Leave Personal at "Not shared" and it stays separate.
 
-The same menus are on each account's page in **Settings → Accounts**. Default can be shared from but is never changed.
+The same menus are on each account's page in **Settings → Accounts**, when Same as Default is off. Default can be shared from but is never changed.
+
+### Continuing on another account
+
+When two accounts share history, a Claude Code conversation started in one can be continued in the other. In the project folder, run:
+
+```bash
+cprof continue personal
+```
+
+This opens the folder's most recent conversation as Personal.
 
 Conversations in Claude Desktop, and connectors such as Gmail or Slack, belong to one Claude account on Anthropic's servers and cannot be shared. [How it works](how-it-works.md#optional-sharing) has the details.
 
