@@ -40,7 +40,7 @@ Switchboard asks Claude Code about its sign-in at most every 10 seconds. Close t
 
 ### A new account has no MCP servers
 
-MCP servers are per account unless you share them. On the new account's page in Settings, set Sharing to Custom and Connectors to the account that has the servers, and they are copied in. A copied server may still ask you to sign in once per account.
+MCP servers are per account unless you share them. On the new account's page in Settings, choose **Choose for each** and set Claude Code connectors to the account that has the servers, and they are copied in. A copied server may still ask you to sign in once per account.
 
 ### A connector I added does not show up in another account
 
@@ -48,11 +48,11 @@ Connectors are copied from the account chosen on that account's page in Settings
 
 ### Extensions are missing in another account's Claude Desktop
 
-On that account's page in Settings, set Sharing to Custom and Desktop extensions to the account that has them, then quit and reopen its Claude Desktop. Extensions are copied only when its Claude Desktop starts, never while it is running.
+On that account's page in Settings, choose **Choose for each** and set Claude Desktop extensions to the account that has them, then quit and reopen its Claude Desktop. Extensions are copied only when its Claude Desktop starts, never while it is running.
 
 ### `cprof continue` starts a new conversation
 
-The account you continue on does not share history with the one you were using, so it cannot see that conversation. Run the command cprof prints, such as `cprof share personal history default`, or set that account's Sharing to the same as your Default account.
+The account you continue on does not share history with the one you were using, so it cannot see that conversation. Run the command cprof prints, such as `cprof share personal history default`, or set that account's Sharing to **Share with** your Default account.
 
 ### "That would share history in a loop"
 
@@ -60,7 +60,7 @@ History can chain from one account to the next, but not back round to where it s
 
 ### "(account) holds shared history"
 
-Another account keeps its Claude Code sessions in this one, so removing it would delete them. On that account's page in Settings, set Sharing to Separate first.
+Another account keeps its Claude Code sessions in this one, so removing it would delete them. On that account's page in Settings, set Sharing to **Keep separate** first.
 
 ### Sessions are missing after I started sharing history
 

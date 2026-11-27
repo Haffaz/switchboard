@@ -18,7 +18,7 @@ final class SettingsModel: ObservableObject {
     @Published private(set) var opensAtLogin = false
     @Published private(set) var commandLineToolInstalled = false
     /// Accounts where "Custom" was picked but nothing is chosen yet, so the
-    /// three menus stay open instead of falling back to "Separate".
+    /// three menus stay open instead of falling back to "Keep separate".
     @Published private var customOpen: Set<String> = []
 
     private let store = ProfileStore.shared

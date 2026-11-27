@@ -36,9 +36,9 @@ Beyond the items above, an account can share three more things with another acco
 
 Each account's page in **Settings → Accounts** has one **Sharing** choice:
 
-- **Same as Default** (shown with your Default account's name): shares all three with the Default account. New accounts start here.
-- **Separate:** shares none of the three.
-- **Custom:** pick an account for each of the three.
+- **Share with Default** (shown with your Default account's name): shares all three with the Default account. New accounts start here.
+- **Keep separate:** shares none of the three.
+- **Choose for each:** pick an account for each of the three.
 
 From the terminal, use `cprof share`, or create an account with `cprof add <name> --separate`.
 

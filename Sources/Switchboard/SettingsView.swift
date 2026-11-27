@@ -188,8 +188,9 @@ private struct IconPicker: View {
 
 // MARK: - Sharing
 
-/// An account's one sharing choice: the same as the default account,
-/// separate, or chosen thing by thing.
+/// An account's one sharing choice: share with the default account, keep
+/// separate, or choose thing by thing. Worded as what happens, not as
+/// "same as", which read as if the whole account (sign-in too) were copied.
 private struct SharingSection: View {
     @ObservedObject var model: SettingsModel
     let profile: Profile
@@ -198,14 +199,14 @@ private struct SharingSection: View {
         let main = model.defaultDisplayName
         let mode = model.sharingMode(profile)
         Section {
-            ChoiceRow(title: "Same as \(main)",
-                      detail: "Continue \(main)'s Claude Code conversations here, with the same connectors and extensions.",
+            ChoiceRow(title: "Share with \(main)",
+                      detail: "Claude Code conversations, connectors and extensions.",
                       selected: mode == .same) { model.setSharingMode(profile, .same) }
-            ChoiceRow(title: "Separate",
+            ChoiceRow(title: "Keep separate",
                       detail: "Its own conversations, connectors and extensions.",
                       selected: mode == .separate) { model.setSharingMode(profile, .separate) }
-            ChoiceRow(title: "Custom",
-                      detail: "Choose where each one comes from.",
+            ChoiceRow(title: "Choose for each",
+                      detail: "Pick an account for conversations, connectors and extensions.",
                       selected: mode == .custom) { model.setSharingMode(profile, .custom) }
             if mode == .custom {
                 ForEach(SharedThing.allCases, id: \.self) { thing in

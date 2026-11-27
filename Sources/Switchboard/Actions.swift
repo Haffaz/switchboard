@@ -160,14 +160,14 @@ enum Actions {
         return true
     }
 
-    /// Switch "Same as Default" for an account. Returns true if it changed.
+    /// "Share with <default>" on, or "Keep separate", for an account. Returns true if it changed.
     @discardableResult
     static func setSameAsDefault(_ profile: Profile, _ on: Bool) async -> Bool {
         let accounts = accounts, name = profile.name
         let main = store.profile(named: Profile.defaultName)?.displayName ?? "Default"
-        if on, !Dialogs.confirm("Make “\(profile.displayName)” the same as \(main)?",
+        if on, !Dialogs.confirm("Share with \(main)?",
                                 "Its Claude Code sessions join \(main)'s, and \(main)'s connectors and extensions are copied in.",
-                                button: "Make Same") {
+                                button: "Share") {
             return false
         }
         if !on, Sharing(store: accounts).source(.history, for: name) != nil,

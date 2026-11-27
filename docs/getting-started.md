@@ -135,9 +135,9 @@ Each account keeps its own sign-in, chat history, projects and MCP servers.
 
 Each account's page has one **Sharing** choice. Say your Default account is called Work:
 
-- **Same as Work:** the account uses Work's Claude Code history, and gets copies of Work's connectors and extensions. New accounts start here.
-- **Separate:** the account keeps its own.
-- **Custom:** choose an account for each of the three: Claude Code history, connectors, and Claude Desktop extensions.
+- **Share with Work:** the account uses Work's Claude Code conversations, and gets copies of Work's connectors and extensions. New accounts start here.
+- **Keep separate:** the account keeps its own.
+- **Choose for each:** pick an account for each of the three: Claude Code conversations, connectors, and Claude Desktop extensions.
 
 History stays in sync: both accounts use the same sessions, so a change in one shows in the other. Connectors and extensions are copied one way, from the account you chose.
 
