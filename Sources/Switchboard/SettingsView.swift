@@ -198,51 +198,76 @@ private struct SharingSection: View {
         let main = model.defaultDisplayName
         let mode = model.sharingMode(profile)
         Section {
-            Picker("Share with", selection: Binding(get: { mode }, set: { model.setSharingMode(profile, $0) })) {
-                Text("Same as \(main)").tag(SettingsModel.SharingMode.same)
-                Text("Separate").tag(SettingsModel.SharingMode.separate)
-                Divider()
-                Text("Custom").tag(SettingsModel.SharingMode.custom)
-            }
-            .pickerStyle(.menu)
+            ChoiceRow(title: "Same as \(main)",
+                      detail: "Continue \(main)'s Claude Code conversations here, with the same connectors and extensions.",
+                      selected: mode == .same) { model.setSharingMode(profile, .same) }
+            ChoiceRow(title: "Separate",
+                      detail: "Its own conversations, connectors and extensions.",
+                      selected: mode == .separate) { model.setSharingMode(profile, .separate) }
+            ChoiceRow(title: "Custom",
+                      detail: "Choose where each one comes from.",
+                      selected: mode == .custom) { model.setSharingMode(profile, .custom) }
             if mode == .custom {
                 ForEach(SharedThing.allCases, id: \.self) { thing in
                     LabeledContent {
                         SourcePicker(model: model, profile: profile, thing: thing).frame(width: 150)
                     } label: {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(Self.from(thing))
+                            Text(Self.name(thing))
                             Text(Self.how(thing)).font(.callout).foregroundStyle(.secondary)
                         }
                     }
+                    .padding(.leading, ChoiceRow.indent)
                 }
             }
         } header: {
             Text("Sharing")
-        } footer: {
-            // Custom explains itself row by row.
-            if mode == .same {
-                Note("Uses \(main)'s Claude Code history, so either account can continue a conversation. \(main)'s connectors and extensions are copied in.")
-            } else if mode == .separate {
-                Note("Keeps its own Claude Code history, connectors and extensions.")
-            }
         }
     }
 
-    static func from(_ thing: SharedThing) -> String {
+    static func name(_ thing: SharedThing) -> String {
         switch thing {
-        case .history: "Claude Code history from"
-        case .connectors: "Connectors from"
-        case .extensions: "Desktop extensions from"
+        case .history: "Claude Code conversations"
+        case .connectors: "Claude Code connectors"
+        case .extensions: "Claude Desktop extensions"
         }
     }
 
     static func how(_ thing: SharedThing) -> String {
         switch thing {
-        case .history: "The same sessions, changes show in both"
-        case .connectors: "Copied in; ones added here stay here"
-        case .extensions: "Copied in when Claude Desktop starts"
+        case .history: "Shared, the same in both"
+        case .connectors: "MCP servers, copied in"
+        case .extensions: "Copied in when it opens"
         }
+    }
+}
+
+/// A radio button with a line of explanation under its title. The whole
+/// row can be clicked.
+private struct ChoiceRow: View {
+    static let indent: CGFloat = 26
+    let title: String
+    let detail: String
+    let selected: Bool
+    let choose: () -> Void
+
+    var body: some View {
+        Button(action: choose) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Image(systemName: selected ? "largecircle.fill.circle" : "circle")
+                    .foregroundStyle(selected ? Color.accentColor : Color.secondary)
+                    .frame(width: ChoiceRow.indent - 8)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                    Text(detail).font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? [.isSelected] : [])
     }
 }
 
@@ -277,7 +302,7 @@ private struct SourcePicker: View {
         Picker(thing.shortTitle, selection: Binding(
             get: { model.source(thing, for: profile)?.name ?? "" },
             set: { name in model.setSource(thing, for: profile, to: model.profiles.first { $0.name == name }) })) {
-            Text("Not shared").tag("")
+            Text("Its own").tag("")
             Divider()
             ForEach(model.choices(thing, for: profile), id: \.name) { choice in
                 Text(choice.displayName).tag(choice.name)

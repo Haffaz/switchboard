@@ -76,7 +76,7 @@ enum Demo {
             .map { $0.dropFirst("VERSION=".count).trimmingCharacters(in: CharacterSet(charactersIn: "\"")) }
         let settings = SettingsWindow.shared
         settings.model.loadDemo(sources: [
-            "work": [.history: "default", .extensions: "default"],
+            "work": [.history: "default", .connectors: "default", .extensions: "default"],
             "client-acme": [.connectors: "work", .extensions: "work"],
             "side-project": [.history: "default", .connectors: "default", .extensions: "default"],
         ])
