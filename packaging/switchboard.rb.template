@@ -27,7 +27,7 @@ cask "switchboard" do
 
   caveats <<~EOS
     Switchboard lives in your menu bar. Open it once from Applications,
-    then choose "Open at Login" in its menu to keep it there.
+    then switch on "Open at login" under Settings, General to keep it there.
 
     Not affiliated with Anthropic.
   EOS
