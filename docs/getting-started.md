@@ -41,11 +41,11 @@ cd switchboard && ./build.sh --install
 
 Open Switchboard from Applications if it is not already running. A two-cog icon appears in your menu bar.
 
-To have it there after every restart, open **Settings…** from the menu and switch on **Open at login** in the General tab.
+To have it there after every restart, open **Settings…** from the menu and choose **General** in the sidebar, and switch on **Open at login**.
 
 ## 2. Add an account
 
-Click the menu bar icon, choose **Settings…**, and click **+** under the account list.
+Click the menu bar icon, choose **Settings…**, and click **Add Account…** in the sidebar.
 
 <p align="center"><img src="images/add-account.png" width="328" alt="The New Account dialog: one text field for the name"></p>
 
@@ -87,22 +87,23 @@ Choose **Settings…** in the menu, or press **⌘,** while it is open. Everythi
 
 ### Accounts
 
-<p align="center"><img src="images/settings-accounts.png" width="560" alt="Settings, Accounts tab: a list of accounts on the left; on the right the selected account's name, icon, sign-in status for Claude Desktop and Claude Code, and a Sharing choice, and buttons for Dock icon, Terminal, Show Files and Remove"></p>
+<p align="center"><img src="images/settings-accounts.png" width="560" alt="Settings: a sidebar listing the accounts, Add Account and General; beside it the selected account's page with its name and icon, sign-in status for Claude Desktop and Claude Code, a Sharing choice, and links for Dock icon, Terminal, Show Files and Remove"></p>
 
 Pick an account on the left to:
 
-- **Rename it.** Type a new name and press Return. This works for Default too. Only the shown name changes; sign-ins, history and files stay where they are. Clear the field to go back to the original name.
-- **Give it an icon,** so you can find it by shape in the menu.
+- **Rename it.** Click **Edit Name and Icon**, type a new name and press Return. This works for Default too. Only the shown name changes; sign-ins, history and files stay where they are. Clear the field to go back to the original name.
+- **Give it an icon,** also under **Edit Name and Icon**, so you can find it by shape in the menu.
 - **See and redo its sign-ins** for Claude Desktop and Claude Code.
 - **Add a Dock icon** that opens that account's Claude Desktop.
 - **Choose what it shares** with other accounts.
-- **Remove it** with **Remove Account…**, or with **−** under the list.
+- **Open a Terminal** where `claude` and `cprof` use that account.
+- **Remove it** with **Remove Account…**.
 
-**+** under the list adds an account.
+**Add Account…** in the sidebar adds an account.
 
 ### General
 
-<p align="center"><img src="images/settings-general.png" width="560" alt="Settings, General tab: Open at login, Command line tool, Help with Open Guide and Show Log, and Version"></p>
+<p align="center"><img src="images/settings-general.png" width="560" alt="Settings, General page: Open at login, Command line tool, Help with Open Guide and Show Log, and Version"></p>
 
 Open at login, the command line tool, the guide, the log, and the version you are running.
 
@@ -162,6 +163,6 @@ Conversations in Claude Desktop, and connectors such as Gmail or Slack, belong t
 
 ## Removing an account
 
-Open **Settings → Accounts**, pick the account and click **Remove Account…**. This signs it out of Claude Code and deletes its chat history and settings on this Mac. Your Claude account itself is not affected.
+Open **Settings…**, pick the account in the sidebar and click **Remove Account…**. This signs it out of Claude Code and deletes its chat history and settings on this Mac. Your Claude account itself is not affected.
 
 Something not working? See [Troubleshooting](troubleshooting.md).

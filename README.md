@@ -57,7 +57,7 @@ cd switchboard && ./build.sh --install
 
 ## Get started
 
-1. Click the two-cog icon in your menu bar, choose **Settings…**, and click **+** under the account list.
+1. Click the two-cog icon in your menu bar, choose **Settings…**, and click **Add Account…**.
 2. Type a name, such as "Work".
 3. Sign in in the Claude window that opens.
 

@@ -39,7 +39,7 @@ Sources/SwitchboardCore/      Every rule, once. No user interface.
   Shell.swift                   running other programs, and asking Claude Code about its login
 Sources/Switchboard/          The menu bar app.
   MenuController.swift          the menu bar menu: accounts, Settings, Quit
-  SettingsView.swift            the Settings window: Accounts and General tabs
+  SettingsView.swift            the Settings window: a sidebar of accounts and General, one page each
   SettingsModel.swift           what the Settings window shows, and the changes it asks for
   Actions.swift                 everything the app can do; the menu and Settings both call it
   DesktopSignIn.swift           the sign-in flow

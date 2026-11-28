@@ -7,7 +7,7 @@ import SwitchboardCore
 @MainActor
 final class SettingsWindow: NSObject, NSWindowDelegate {
     static let shared = SettingsWindow()
-    static let size = NSSize(width: 660, height: 660)
+    static let size = NSSize(width: 700, height: 600)
 
     let model = SettingsModel()
     private(set) var window: NSWindow?
@@ -22,9 +22,15 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
     }
 
     private func makeWindow() -> NSWindow {
-        let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(model: model)))
+        let host = NSHostingController(rootView: SettingsView(model: model))
+        host.sizingOptions = []  // the window decides the size; the view fills it, title bar included
+        let window = NSWindow(contentViewController: host)
         window.title = "Switchboard Settings"
-        window.styleMask = [.titled, .closable, .miniaturizable]
+        // The sidebar runs to the top of the window, as in System Settings,
+        // so the title bar is drawn over the content and its title hidden.
+        window.styleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
         window.setContentSize(Self.size)
         window.isReleasedWhenClosed = false
         window.delegate = self
@@ -39,72 +45,113 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
     }
 }
 
+/// One sidebar (the accounts, then General) and one page beside it. No
+/// tabs and no boxed groups: rows sit on the window under small titles.
 struct SettingsView: View {
     @ObservedObject var model: SettingsModel
 
     var body: some View {
-        TabView(selection: $model.tab) {
-            AccountsPane(model: model)
-                .tabItem { Label("Accounts", systemImage: "person.2") }.tag(SettingsModel.Tab.accounts)
-            GeneralPane(model: model)
-                .tabItem { Label("General", systemImage: "gearshape") }.tag(SettingsModel.Tab.general)
+        HStack(spacing: 0) {
+            Sidebar(model: model).frame(width: 200)
+            Divider()
+            ScrollView {
+                Group {
+                    if model.tab == .general {
+                        GeneralPage(model: model)
+                    } else if let profile = model.selectedProfile {
+                        AccountPage(model: model, profile: profile).id(profile.name)
+                    }
+                }
+                .padding(.horizontal, 28)
+                .padding(.top, Layout.titleBar + 8)
+                .padding(.bottom, 24)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
-        .padding(.top, 10)
-        .frame(width: SettingsWindow.size.width, height: SettingsWindow.size.height)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(nsColor: .windowBackgroundColor))
+        .ignoresSafeArea()
     }
 }
 
-// MARK: - Accounts
+private enum Layout {
+    /// Room for the window's close and minimise buttons.
+    static let titleBar: CGFloat = 36
+}
 
-private struct AccountsPane: View {
+// MARK: - Sidebar
+
+private struct Sidebar: View {
     @ObservedObject var model: SettingsModel
 
     var body: some View {
-        HStack(spacing: 0) {
-            VStack(spacing: 0) {
-                List(selection: $model.selected) {
-                    ForEach(model.profiles, id: \.name) { profile in
-                        HStack(spacing: 8) {
-                            Image(systemName: profile.iconSymbol).frame(width: 18)
-                            Text(profile.displayName).lineLimit(1)
-                            if profile.isDefault { MainTag() }
-                            Spacer(minLength: 4)
-                            if model.running.contains(profile.name) {
-                                Circle().fill(.green).frame(width: 7, height: 7).help("Claude Desktop is running")
-                            }
-                        }
-                        .tag(profile.name)
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Accounts")
+                .font(.caption.weight(.medium)).foregroundStyle(.secondary)
+                .padding(.horizontal, 8).padding(.bottom, 4)
+            ForEach(model.profiles, id: \.name) { profile in
+                let selected = model.tab == .accounts && model.selectedProfile?.name == profile.name
+                SidebarRow(icon: profile.iconSymbol, title: profile.displayName, selected: selected) {
+                    if profile.isDefault { MainTag(onAccent: selected) }
+                    Spacer(minLength: 4)
+                    if model.running.contains(profile.name) {
+                        Circle().fill(.green).frame(width: 7, height: 7).help("Claude Desktop is running")
                     }
+                } action: {
+                    model.selected = profile.name
+                    model.tab = .accounts
                 }
-                Divider()
-                HStack(spacing: 2) {
-                    Button { model.addAccount() } label: { Image(systemName: "plus").frame(width: 22, height: 18) }
-                        .help("Add an account")
-                    Button {
-                        if let profile = model.selectedProfile { model.remove(profile) }
-                    } label: { Image(systemName: "minus").frame(width: 22, height: 18) }
-                        .disabled(model.selectedProfile?.isDefault ?? true)
-                        .help("Remove this account")
-                    Spacer()
-                }
-                .buttonStyle(.borderless)
-                .padding(6)
             }
-            .frame(width: 190)
-            Divider()
-            if let profile = model.selectedProfile {
-                AccountDetail(model: model, profile: profile).id(profile.name)
-            } else {
-                Spacer()
+            SidebarRow(icon: "plus", title: "Add Account…", selected: false, dimmed: true) { Spacer(minLength: 0) } action: {
+                model.tab = .accounts
+                model.addAccount()
+            }
+            Spacer(minLength: 12)
+            SidebarRow(icon: "gearshape", title: "General", selected: model.tab == .general) { Spacer(minLength: 0) } action: {
+                model.tab = .general
             }
         }
+        .padding(.horizontal, 10)
+        .padding(.top, Layout.titleBar + 6)
+        .padding(.bottom, 12)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .background(Color.primary.opacity(0.045))
     }
 }
 
-private struct AccountDetail: View {
+private struct SidebarRow<Trailing: View>: View {
+    let icon: String
+    let title: String
+    let selected: Bool
+    var dimmed = false
+    @ViewBuilder let trailing: Trailing
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon).frame(width: 18)
+                Text(title).lineLimit(1)
+                trailing
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .foregroundStyle(selected ? AnyShapeStyle(Color.white) : AnyShapeStyle(dimmed ? .secondary : .primary))
+            .background(selected ? Color.accentColor : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? [.isSelected] : [])
+    }
+}
+
+// MARK: - An account's page
+
+private struct AccountPage: View {
     @ObservedObject var model: SettingsModel
     let profile: Profile
     @State private var name = ""
+    @State private var editing = false
     @FocusState private var nameFocused: Bool
 
     private func saveName() {
@@ -112,20 +159,47 @@ private struct AccountDetail: View {
         model.rename(profile, to: name)
     }
 
+    private var status: String {
+        let running = model.running.contains(profile.name) ? "Claude Desktop is running" : "Claude Desktop is not running"
+        return profile.isDefault ? "Main account · \(running)" : running
+    }
+
     var body: some View {
-        Form {
-            Section {
-                TextField("Name", text: $name)
-                    .focused($nameFocused)
-                    .onSubmit { saveName() }
-                LabeledContent("Icon") { IconPicker(selected: profile.icon) { model.setIcon(profile, to: $0) } }
-            } footer: {
-                if profile.isDefault {
-                    Note("Your main account: the Claude setup you had before Switchboard. Other accounts can share its conversations, connectors and extensions. It is never moved or changed.")
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 12) {
+                Image(systemName: profile.iconSymbol)
+                    .font(.system(size: 18))
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 40, height: 40)
+                    .background(Color.accentColor.opacity(0.14), in: Circle())
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(profile.displayName).font(.title3.weight(.semibold)).lineLimit(1)
+                    Text(status).font(.callout).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 8)
+                Button(editing ? "Done" : "Edit Name and Icon") {
+                    if editing { saveName() }
+                    editing.toggle()
                 }
             }
-            Section("Sign-in") {
-                LabeledContent("Claude Desktop") {
+            if profile.isDefault {
+                Note("The Claude setup you had before Switchboard. Other accounts can share its conversations, connectors and extensions. It is never moved or changed.")
+                    .padding(.top, 10)
+            }
+            if editing {
+                RowGroup(title: "Name and icon") {
+                    Row("Name") {
+                        TextField("Name", text: $name)
+                            .textFieldStyle(.roundedBorder).labelsHidden().frame(width: 220)
+                            .focused($nameFocused)
+                            .onSubmit { saveName() }
+                    }
+                    Divider()
+                    Row("Icon") { IconPicker(selected: profile.icon) { model.setIcon(profile, to: $0) } }
+                }
+            }
+            RowGroup(title: "Sign-in") {
+                Row("Claude Desktop") {
                     if profile.isDefault {
                         Text("Your usual sign-in").foregroundStyle(.secondary)
                     } else {
@@ -133,7 +207,8 @@ private struct AccountDetail: View {
                         Button(profile.desktopSignedIn ? "Sign In Again…" : "Sign In…") { model.signInDesktop(profile) }
                     }
                 }
-                LabeledContent("Claude Code") {
+                Divider()
+                Row("Claude Code") {
                     Text(profile.codeSignedIn ? profile.email : "Not signed in").foregroundStyle(.secondary).lineLimit(1)
                     Button(profile.codeSignedIn ? "Sign In Again…" : "Sign In…") { model.signInCode(profile) }
                 }
@@ -143,22 +218,59 @@ private struct AccountDetail: View {
             } else {
                 SharingSection(model: model, profile: profile)
             }
-            Section {
-                HStack {
-                    if !profile.isDefault { Button("Add Dock Icon") { model.makeDockApp(profile) } }
-                    Button("Open Terminal") { model.openTerminal(profile) }
-                        .help("A Terminal window where claude and cprof use this account")
-                    Button("Show Files") { model.reveal(profile) }
-                    Spacer()
-                    if !profile.isDefault { Button("Remove Account…", role: .destructive) { model.remove(profile) } }
+            Divider().padding(.top, 18)
+            HStack(spacing: 16) {
+                if !profile.isDefault { Button("Add Dock Icon") { model.makeDockApp(profile) } }
+                Button("Open Terminal") { model.openTerminal(profile) }
+                    .help("A Terminal window where claude and cprof use this account")
+                Button("Show Files") { model.reveal(profile) }
+                Spacer()
+                if !profile.isDefault {
+                    Button("Remove Account…") { model.remove(profile) }.foregroundStyle(.red)
                 }
             }
+            .buttonStyle(.link)
+            .padding(.top, 12)
         }
-        .formStyle(.grouped)
         .onAppear { name = profile.displayName }
         // Leaving the field, or picking another account, saves the name too.
         .onDisappear { saveName() }
         .onChange(of: nameFocused) { _, focused in if !focused { saveName() } }
+    }
+}
+
+/// A titled run of rows, with no box around it.
+private struct RowGroup<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title)
+                .font(.subheadline.weight(.medium)).foregroundStyle(.secondary)
+                .padding(.top, 22).padding(.bottom, 2)
+            content
+        }
+    }
+}
+
+/// A label on the left, its value and controls on the right.
+private struct Row<Trailing: View>: View {
+    let label: String
+    @ViewBuilder let trailing: Trailing
+
+    init(_ label: String, @ViewBuilder trailing: () -> Trailing) {
+        self.label = label
+        self.trailing = trailing()
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(label)
+            Spacer(minLength: 12)
+            trailing
+        }
+        .padding(.vertical, 8)
     }
 }
 
@@ -201,31 +313,33 @@ private struct SharingSection: View {
     var body: some View {
         let main = model.defaultDisplayName
         let mode = model.sharingMode(profile)
-        Section {
+        RowGroup(title: "Sharing") {
             ChoiceRow(title: "Share with \(main)",
                       detail: "Your main account's Claude Code conversations, connectors and extensions. Claude Desktop chats stay with each account.",
                       selected: mode == .same) { model.setSharingMode(profile, .same) }
+            Divider()
             ChoiceRow(title: "Keep separate",
                       detail: "Its own conversations, connectors and extensions.",
                       selected: mode == .separate) { model.setSharingMode(profile, .separate) }
+            Divider()
             ChoiceRow(title: "Choose for each",
                       detail: "Pick an account for conversations, connectors and extensions.",
                       selected: mode == .custom) { model.setSharingMode(profile, .custom) }
             if mode == .custom {
                 ForEach(SharedThing.allCases, id: \.self) { thing in
-                    LabeledContent {
-                        SourcePicker(model: model, profile: profile, thing: thing).frame(width: 150)
-                    } label: {
+                    Divider().padding(.leading, ChoiceRow.indent)
+                    HStack(spacing: 10) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(Self.name(thing))
                             Text(Self.how(thing)).font(.callout).foregroundStyle(.secondary)
                         }
+                        Spacer(minLength: 12)
+                        SourcePicker(model: model, profile: profile, thing: thing).frame(width: 150)
                     }
+                    .padding(.vertical, 6)
                     .padding(.leading, ChoiceRow.indent)
                 }
             }
-        } header: {
-            Text("Sharing")
         }
     }
 
@@ -268,6 +382,7 @@ private struct ChoiceRow: View {
                 }
                 Spacer(minLength: 0)
             }
+            .padding(.vertical, 8)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -282,12 +397,14 @@ private struct UsedBySection: View {
 
     var body: some View {
         let shared = model.sharesFrom(profile)
-        Section("Shared with other accounts") {
+        RowGroup(title: "Shared with other accounts") {
             if shared.isEmpty {
-                Text("No other account uses this one's history, connectors or extensions.").foregroundStyle(.secondary)
+                Text("No other account uses this one's conversations, connectors or extensions.")
+                    .foregroundStyle(.secondary).padding(.vertical, 8)
             } else {
-                ForEach(shared, id: \.thing) { entry in
-                    LabeledContent(entry.thing.title) {
+                ForEach(Array(shared.enumerated()), id: \.element.thing) { index, entry in
+                    if index > 0 { Divider() }
+                    Row(SharingSection.name(entry.thing)) {
                         Text(entry.accounts.map(\.displayName).joined(separator: ", ")).foregroundStyle(.secondary)
                     }
                 }
@@ -320,49 +437,57 @@ private struct SourcePicker: View {
 
 // MARK: - General
 
-private struct GeneralPane: View {
+private struct GeneralPage: View {
     @ObservedObject var model: SettingsModel
 
     var body: some View {
-        Form {
-            Section {
-                Toggle("Open at login", isOn: Binding(get: { model.opensAtLogin }, set: { model.setOpensAtLogin($0) }))
-                LabeledContent {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("General").font(.title3.weight(.semibold))
+            RowGroup(title: "Switchboard") {
+                Row("Open at login") {
+                    Toggle("Open at login", isOn: Binding(get: { model.opensAtLogin }, set: { model.setOpensAtLogin($0) }))
+                        .labelsHidden().toggleStyle(.switch).controlSize(.small)
+                }
+                Divider()
+                HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Command line tool")
+                        Text("Use Switchboard from a terminal with cprof.").font(.callout).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 12)
                     if model.commandLineToolInstalled {
                         Text("Installed").foregroundStyle(.secondary)
                     } else {
                         Button("Install") { model.installCommandLineTool() }
                     }
-                } label: {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Command line tool")
-                        Text("Use Switchboard from a terminal with cprof.").font(.callout).foregroundStyle(.secondary)
-                    }
                 }
+                .padding(.vertical, 8)
             }
-            Section {
-                LabeledContent("Help") {
+            RowGroup(title: "About") {
+                Row("Help") {
                     Button("Open Guide") { Actions.openGuide() }
                     Button("Show Log") { Actions.showLog() }
                 }
-                LabeledContent("Version", value: Actions.version)
-            } footer: {
-                Note("Switchboard is an independent tool, not made by Anthropic.")
+                Divider()
+                Row("Version") { Text(Actions.version).foregroundStyle(.secondary) }
             }
+            Note("Switchboard is an independent tool, not made by Anthropic.").padding(.top, 14)
         }
-        .formStyle(.grouped)
     }
 }
 
 /// Marks the main account (the one Switchboard calls "default") in the list.
 private struct MainTag: View {
+    /// True on the selected sidebar row, where the text is white.
+    var onAccent = false
+
     var body: some View {
         Text("Main")
             .font(.caption.weight(.medium))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(onAccent ? AnyShapeStyle(Color.white) : AnyShapeStyle(.secondary))
             .padding(.horizontal, 6)
             .padding(.vertical, 1)
-            .background(.quaternary, in: Capsule())
+            .background(onAccent ? AnyShapeStyle(Color.white.opacity(0.22)) : AnyShapeStyle(.quaternary), in: Capsule())
             .help("Your main account: the Claude setup you had before Switchboard")
     }
 }

@@ -122,7 +122,7 @@ macOS caches app icons. Log out and back in to refresh it.
 
 ## Uninstalling
 
-1. In **Settings → Accounts**, remove each account you added with **Remove Account…**. This signs it out of Claude Code and deletes its data.
+1. In **Settings…**, pick each account you added and click **Remove Account…**. This signs it out of Claude Code and deletes its data.
 2. Quit Switchboard and delete `/Applications/Switchboard.app`. If you installed with Homebrew, run `brew uninstall --cask switchboard` instead.
 3. Delete what is left:
 
